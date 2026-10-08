@@ -8,6 +8,14 @@ Codex Usage Meter 用一个额度圆环显示大致余量，点击后查看完�
 
 > 非官方个人项目，与 OpenAI 无隶属关系。目前以本机使用为主，尚未经过 Developer ID 签名、公证或广泛的跨版本兼容测试。
 
+## 界面预览
+
+<p align="center">
+  <img src="docs/images/usage-meter-panel.png" alt="Codex Usage Meter 菜单面板：VPN 状态、Weekly 剩余额度、快捷操作及固定聊天" width="440">
+</p>
+
+实际运行截图，裁剪自桌面截图。此例中接口仅返回 Weekly 额度；返回 5 小时额度时也会显示 Session。
+
 ## 主要功能
 
 | 功能 | 行为 |
