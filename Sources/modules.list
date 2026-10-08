@@ -1,0 +1,13 @@
+# JXA concatenation order. Definitions first; main owns startup side effects.
+core
+runtime
+state
+appearance
+status-icon
+menu
+pinned-menu
+vpn
+tasks
+usage-cache
+usage
+main

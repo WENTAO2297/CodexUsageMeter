@@ -1,0 +1,16 @@
+.DS_Store
+AppBundle/
+*.log
+
+# Local instructions, historic binaries and runtime/private data are not published.
+/AGENTS.md
+/Releases/
+*.app/
+.env
+.env.*
+.codex/
+auth.json
+*.sqlite
+*.sqlite-*
+Cache/
+Rollback/
