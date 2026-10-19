@@ -26,17 +26,28 @@ function readUsageCache(accountId) {
 function saveUsageCache(normalized) {
   if (!usageAccountId || readUsageAccountId() !== usageAccountId) return;
   try {
-    var manager = $.NSFileManager.defaultManager;
-    var folder = usageCachePath.slice(0, usageCachePath.lastIndexOf('/'));
-    var privateFolder = $({ NSFilePosixPermissions: 448 }); // 0700
-    if (!manager.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(folder, true, privateFolder, null))
-      throw new Error('Unable to create quota cache directory');
-    if (!manager.setAttributesOfItemAtPathError(privateFolder, folder, null))
-      throw new Error('Unable to protect quota cache directory');
-    var snapshot = { version: 1, accountId: usageAccountId, savedAt: Date.now(), usage: normalized };
-    if (!$(JSON.stringify(snapshot)).writeToFileAtomicallyEncodingError(usageCachePath, true, $.NSUTF8StringEncoding, null))
-      throw new Error('Unable to write quota cache');
-    if (!manager.setAttributesOfItemAtPathError($({ NSFilePosixPermissions: 384 }), usageCachePath, null))
-      throw new Error('Unable to protect quota cache');
+    var snapshot = { version: 1, accountId: usageAccountId, savedAt: Date.now(), usage: normalized,
+      planType:typeof usagePlanType==='undefined'?null:usagePlanType };
+    writePrivateUsageJSON(usageCachePath, snapshot);
   } catch (error) { logError('usage-cache-write', error); }
+}
+
+function writePrivateUsageJSON(path, snapshot) {
+  // Both caches contain account identifiers: keep their privacy and atomic
+  // write behavior in one place. Recheck identity just before touching disk.
+  if (!usageAccountId || readUsageAccountId() !== usageAccountId) return;
+  writePrivateJSON(path, snapshot);
+}
+
+function writePrivateJSON(path, snapshot) {
+  var manager = $.NSFileManager.defaultManager;
+  var folder = path.slice(0, path.lastIndexOf('/'));
+  var privateFolder = $({ NSFilePosixPermissions: 448 }); // 0700
+  if (!manager.createDirectoryAtPathWithIntermediateDirectoriesAttributesError(folder, true, privateFolder, null) ||
+      !manager.setAttributesOfItemAtPathError(privateFolder, folder, null))
+    throw new Error('Unable to protect usage cache directory');
+  if (!$(JSON.stringify(snapshot)).writeToFileAtomicallyEncodingError(path, true, $.NSUTF8StringEncoding, null))
+    throw new Error('Unable to write usage cache');
+  if (!manager.setAttributesOfItemAtPathError($({ NSFilePosixPermissions: 384 }), path, null))
+    throw new Error('Unable to protect usage cache');
 }

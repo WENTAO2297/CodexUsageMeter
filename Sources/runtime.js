@@ -102,25 +102,6 @@ function logError(component, error) {
   } catch (ignored) {}
 }
 
-function fileRevision(path) {
-  try {
-    var attributes = $.NSFileManager.defaultManager.attributesOfItemAtPathError($(path), null);
-    if (!attributes) return 'missing';
-    var modified = attributes.objectForKey($.NSFileModificationDate);
-    var size = attributes.objectForKey($.NSFileSize);
-    var timestamp = modified ? Number(modified.timeIntervalSince1970) : 0;
-    return timestamp + ':' + (size ? Number(ObjC.unwrap(size)) : 0);
-  } catch (error) {
-    return 'unavailable';
-  }
-}
-
-function combinedRevision(paths) {
-  var revisions = [];
-  for (var i = 0; i < paths.length; i++) revisions.push(fileRevision(paths[i]));
-  return revisions.join('|');
-}
-
 function resourcePath(name) {
   return ObjC.unwrap($.NSBundle.mainBundle.resourcePath) + '/' + name;
 }

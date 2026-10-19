@@ -5,6 +5,7 @@ AppBundle/
 # Local instructions, historic binaries and runtime/private data are not published.
 /AGENTS.md
 /Releases/
+/Backups/
 *.app/
 .env
 .env.*

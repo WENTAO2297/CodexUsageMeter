@@ -33,10 +33,19 @@ function normalizeUsage(response) {
   });
   var credits = payload.rateLimitResetCredits || {};
   return { windows: windows,
-    credits: typeof credits.availableCount === 'number' && isFinite(credits.availableCount) ? Math.max(0, Math.floor(credits.availableCount)) : 0,
+    credits: typeof credits.availableCount === 'number' && isFinite(credits.availableCount)&&credits.availableCount>=0&&Math.floor(credits.availableCount)===credits.availableCount ? credits.availableCount : null,
     expirations: (Array.isArray(credits.credits) ? credits.credits : []).filter(function(c) {
       return c && c.status === 'available' && typeof c.expiresAt === 'number' && isFinite(c.expiresAt) && c.expiresAt > 0;
-    }).map(function(c) { return c.expiresAt; }) };
+    }).map(function(c) { return c.expiresAt; }),
+    resetCards:resetCardMetadata((Array.isArray(credits.credits)?credits.credits:[]).filter(function(c){return c&&c.status==='available';})) };
+}
+function resetCardMetadata(cards) {
+  function valid(value){return typeof value==='number'&&isFinite(value)&&value>0&&value<=8.64e12;}
+  return (Array.isArray(cards)?cards:[]).slice(0,100).map(function(card){
+    var expiry=card&&valid(card.expiresAt)?card.expiresAt:null;
+    return {expiresAt:expiry,grantedAt:card&&valid(card.grantedAt)&&expiry&&card.grantedAt<expiry?card.grantedAt:null,
+      observedAt:card&&valid(card.observedAt)?card.observedAt:null};
+  });
 }
 function gaugeQuotaWindow(windows) {
   // Preserve the familiar Session gauge when available; weekly-only plans
@@ -48,6 +57,17 @@ function gaugeQuotaWindow(windows) {
     if (windows[j].durationMins === 10080) return windows[j];
   }
   return windows[0];
+}
+function normalizeStatusDisplayMode(value) {
+  return value === 'icon' ? 'icon' : 'quota';
+}
+function remainingQuotaText(windows) {
+  if (!Array.isArray(windows) || !windows.length) return '—';
+  var gauge = gaugeQuotaWindow(windows);
+  var value = gauge && gauge.remaining;
+  if (typeof value !== 'number' || !isFinite(value) || value < 0 || value > 100) return '—';
+  // Keep the tiny center readable; precise values remain in the menu/help.
+  return String(Math.round(value));
 }
 function quotaValueLabel(state, sync) {
   if (state.remaining !== null && state.remaining !== undefined) return state.remaining + '% remaining' + (sync === 'error' || sync === 'cached' ? ' · stale' : '');
@@ -66,7 +86,7 @@ function normalizeUsageCache(cache, accountId, now) {
     throw new Error('Invalid or expired quota cache');
   var usage = cache.usage;
   if (!usage || !Array.isArray(usage.windows) || usage.windows.length < 1 || usage.windows.length > 2 ||
-      typeof usage.credits !== 'number' || !isFinite(usage.credits) || usage.credits < 0 || Math.floor(usage.credits) !== usage.credits ||
+      (usage.credits!==null&&(typeof usage.credits !== 'number' || !isFinite(usage.credits) || usage.credits < 0 || Math.floor(usage.credits) !== usage.credits)) ||
       !Array.isArray(usage.expirations) || usage.expirations.length > 100 ||
       usage.expirations.some(function(value) { return typeof value !== 'number' || !isFinite(value) || value <= 0; }))
     throw new Error('Invalid cached quota data');
@@ -77,25 +97,10 @@ function normalizeUsageCache(cache, accountId, now) {
       windowDurationMins: window.durationMins, resetsAt: window.resetAt });
   });
   windows.sort(function(a, b) { return (a.durationMins === null ? Infinity : a.durationMins) - (b.durationMins === null ? Infinity : b.durationMins); });
-  return { windows: windows, credits: usage.credits, expirations: usage.expirations.slice() };
+  return { windows: windows, credits: usage.credits, expirations: usage.expirations.slice(),
+    resetCards:resetCardMetadata(usage.resetCards),savedAt:cache.savedAt,
+    planType:typeof cache.planType==='string'&&/^[a-zA-Z0-9_-]{1,32}$/.test(cache.planType)?cache.planType:null };
 }
 function isExecutionFresh(timestamp, now, freshness) {
   return isFinite(timestamp) && timestamp > 0 && timestamp <= now + 60 && now - timestamp <= freshness;
-}
-
-function parsePinnedThreads(raw) {
-  var rows = raw ? raw.split(/\r\n|\n|\r/) : [];
-  var threads = [];
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i].trim();
-    if (!row) continue;
-    var separator = row.indexOf('\t');
-    if (separator <= 0) continue;
-    var threadId = row.slice(0, separator);
-    var title = row.slice(separator + 1).replace(/\s+/g, ' ').trim();
-    if (/^[0-9a-fA-F-]{36}$/.test(threadId) && title) {
-      threads.push({ threadId: threadId, title: title });
-    }
-  }
-  return threads;
 }

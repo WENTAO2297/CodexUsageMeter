@@ -1,3 +1,32 @@
+function statusDisplayPreferences() {
+  return $.NSUserDefaults.standardUserDefaults;
+}
+
+function restoreStatusDisplayMode() {
+  try {
+    statusDisplayMode = normalizeStatusDisplayMode(ObjC.unwrap(
+      statusDisplayPreferences().stringForKey(STATUS_DISPLAY_PREFERENCE_KEY)
+    ));
+  } catch (error) {
+    statusDisplayMode = 'quota';
+    logError('status-display-read', error);
+  }
+}
+
+function setStatusDisplayMode(mode) {
+  if (isExiting || (mode !== 'quota' && mode !== 'icon') || mode === statusDisplayMode) return;
+  try {
+    statusDisplayPreferences().setObjectForKey($(mode), $(STATUS_DISPLAY_PREFERENCE_KEY));
+  } catch (error) {
+    logError('status-display-save', error);
+    return;
+  }
+  statusDisplayMode = mode;
+  updateStatusDisplayMenu();
+  // Change only the center, preserving the current ring/activity animation.
+  rebuildStatusIconImages();
+}
+
 function setRunningIndicator(shouldShow) {
   if (isExiting) return;
   if (hasRunningTasks === shouldShow) return;
@@ -9,8 +38,8 @@ function setRunningIndicator(shouldShow) {
 }
 
 function desiredStatusIconMode() {
-  // The icon communicates activity only. Quota urgency remains on the
-  // percentage and progress bars, so the glyph stays visually stable.
+  // The center's color communicates activity only. Quota urgency remains on
+  // the ring and progress bars, independently of numbers versus the logo.
   if (hasRunningTasks) return 'active';
   return 'idle';
 }
@@ -37,6 +66,39 @@ function makeTintedIcon(source, color) {
   return tinted;
 }
 
+function drawQuotaStatusNumber(center, color) {
+  var text = remainingQuotaText(quotaWindows);
+  var fontSize = text.length > 2 ? 7.5 : 10.5;
+  var font = statusQuotaFont(fontSize);
+  var attributes = $({ NSFont: font, NSColor: color });
+  var value = $(text);
+  // Tabular advances include asymmetric side bearings (especially for 1).
+  // Center the visible glyphs horizontally, not the empty layout cells. Keep
+  // the established vertical baseline and font sizes so the ring is unchanged.
+  // A quota has only 0..100 / —; reuse metrics during ring/color animations.
+  var layouts = drawQuotaStatusNumber.layouts || (drawQuotaStatusNumber.layouts = {});
+  var key = ObjC.unwrap(font.fontName) + ':' + fontSize + ':' + text;
+  var layout = layouts[key];
+  if (!layout) {
+    var size = value.sizeWithAttributes(attributes);
+    layout = { x: Number(size.width) / 2, y: Number(size.height) / 2 };
+    try {
+      var bounds = value.boundingRectWithSizeOptionsAttributes(
+        $.NSMakeSize(25, 25), $.NSStringDrawingUsesDeviceMetrics, attributes
+      );
+      var x = Number(bounds.origin.x) + Number(bounds.size.width) / 2;
+      if (isFinite(x) && Number(bounds.size.width) > 0 && Number(bounds.size.width) <= 25) layout.x = x;
+    } catch (ignored) {
+      // A missing bridge/metric on another macOS build must not break the icon.
+    }
+    layouts[key] = layout;
+  }
+  value.drawAtPointWithAttributes(
+    $.NSMakePoint(center.x - layout.x, center.y - layout.y),
+    attributes
+  );
+}
+
 function makeQuotaStatusIcon(source, color, fraction) {
   var iconSize = 22;
   // Keep the circular gauge centered in a compact status-bar canvas.
@@ -48,7 +110,7 @@ function makeQuotaStatusIcon(source, color, fraction) {
   var image = $.NSImage.alloc.initWithSize($.NSMakeSize(canvasWidth, canvasHeight));
   var boundedFraction = Math.max(0, Math.min(1.0, fraction || 0));
   var trackColor = cardColor(0.38, 0.39, 0.43, 0.78);
-  // The knot communicates activity, while the ring communicates quota health.
+  // The center communicates activity, while the ring communicates quota health.
   // Keep these channels independent so a running task does not make a healthy
   // quota look critical merely because the icon is in its active state.
   // Use red for the short startup placeholder. Once synced, the visible
@@ -79,18 +141,24 @@ function makeQuotaStatusIcon(source, color, fraction) {
   sendVoid(ringColor, 'setStroke');
   if (boundedFraction > 0) sendVoid(progress, 'stroke');
 
-  var tintedLogo = makeTintedIcon(source, color, logoSize);
-  tintedLogo.drawInRectFromRectOperationFraction(
-    $.NSMakeRect(
-      gaugeOffsetX + (iconSize - logoSize) / 2,
-      gaugeOffsetY + (iconSize - logoSize) / 2,
-      logoSize,
-      logoSize
-    ),
-    $.NSMakeRect(0, 0, 0, 0),
-    $.NSCompositingOperationSourceOver,
-    1.0
-  );
+  if (statusDisplayMode === 'icon') {
+    var tintedLogo = makeTintedIcon(source, color, logoSize);
+    tintedLogo.drawInRectFromRectOperationFraction(
+      $.NSMakeRect(
+        gaugeOffsetX + (iconSize - logoSize) / 2,
+        gaugeOffsetY + (iconSize - logoSize) / 2,
+        logoSize,
+        logoSize
+      ),
+      $.NSMakeRect(0, 0, 0, 0),
+      $.NSCompositingOperationSourceOver,
+      1.0
+    );
+  } else {
+    // Use the actual quota, never the animated arc's intermediate value or
+    // its 2% startup placeholder. A stale known quota remains readable.
+    drawQuotaStatusNumber(center, color);
+  }
 
   sendVoid(image, 'unlockFocus');
   image.template = false;
@@ -158,16 +226,13 @@ function stepIconAnimation() {
 
 function updateStatusButtonTitle() {
   if (!statusButton) return;
-  // The quota is now encoded by the circular ring, so keep the button image
-  // only. Retain the current value in accessibility and the tooltip for
-  // users who need the exact percentage.
-  statusButton.title = '';
+  // Both center styles are rendered inside the circular ring, so keep the
+  // button image-only. Retain the exact percentage in accessibility.
+  if (ObjC.unwrap(statusButton.title)) statusButton.title = '';
   var accessibleValue = usageSyncState === 'loading' ? 'Syncing' : usageText === '!' ? 'Sync failed' : usageText;
-  statusButton.toolTip = 'Codex Usage: ' + accessibleValue;
-
-
   try {
     statusButton.accessibilityLabel = 'Codex Usage ' + accessibleValue;
+    if (typeof uiText === 'function') statusButton.accessibilityLabel = uiText(ObjC.unwrap(statusButton.accessibilityLabel));
   } catch (error) {
     // Accessibility is best-effort on older AppKit bridges.
   }
@@ -175,11 +240,8 @@ function updateStatusButtonTitle() {
 
 function setMenuBarText(text) {
   usageText = String(text);
+  if (statusDisplayMode === 'quota') rebuildStatusIconImages();
   updateStatusButtonTitle();
-  // Move the circular gauge down by one point to align its optical center with
-  // neighboring menu-bar icons.
-  var frame = statusButton.frame;
-  statusButton.setFrameOrigin($.NSMakePoint(frame.origin.x, -1.0));
 }
 
 function configureMenuBarIcon() {
@@ -194,6 +256,9 @@ function configureMenuBarIcon() {
 
   statusButton.imagePosition = $.NSImageOnly;
   statusButton.imageScaling = $.NSImageScaleProportionallyDown;
+  // Position once; quota updates do not move the native status view.
+  var frame = statusButton.frame;
+  statusButton.setFrameOrigin($.NSMakePoint(frame.origin.x, -1.0));
   updateStatusButtonTitle();
 }
 

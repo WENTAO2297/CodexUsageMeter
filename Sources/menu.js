@@ -1,29 +1,15 @@
+// Native menu composition and quota/traffic readout views.
+// Shared row interaction, preferences and VPN controls have separate owners.
 function quotaCardLayout() {
-  var compactGap = QUOTA_SPACING_UNIT;
-  var titleToBarGap = 1;
-  var sectionGap = 5;
-  var quotaGroupGap = sectionGap + 2;
-  var titleLineHeight = 16;
-  var barHeight = 6;
-  var resetLineHeight = 13;
-
-  var count = quotaWindows.length;
-  var groupHeight = resetLineHeight + compactGap + barHeight + titleToBarGap + titleLineHeight;
-  var rows = [];
+  var count=quotaWindows.length, geometry=dashboardMetricLayout(MENU_WIDTH,'quota'), rows=[];
   for (var i = 0; i < count; i++) {
-    var resetY = sectionGap + (count - i - 1) * (groupHeight + quotaGroupGap);
-    var barY = resetY + resetLineHeight + compactGap;
-    rows.push({ titleY: barY + barHeight + titleToBarGap, barY: barY, resetY: resetY });
+    rows.push({offset:(count-i-1)*(geometry.height+geometry.gap)});
   }
-
-  return {
-    height: rows[0].titleY + titleLineHeight + sectionGap,
-    barHeight: barHeight,
-    rows: rows
-  };
+  return {height:count*geometry.height+Math.max(0,count-1)*geometry.gap,rows:rows};
 }
 
 function quotaResetLabel(state) {
+  if(typeof canUseRecentQuotaDisplay==='function'&&canUseRecentQuotaDisplay())return cardResetText(state.resetAt);
   if (usageSyncState === 'error' && state.remaining !== null) return 'Update failed · last known value';
   if (usageSyncState === 'error') return 'Update failed · retrying';
   if (usageSyncState === 'cached') return 'Cached value · updating';
@@ -73,7 +59,38 @@ function inlineResetCreditText() {
   return '↻ ' + availableCredits + ' ' + useLabel + ' · Expires ' + resetCreditExpiryText();
 }
 
-ObjC.registerSubclass({
+function quotaFooterParts(state,includeCredits) {
+  var raw=quotaResetLabel(state),match=/^Resets (\d+\/\d+ \d+:\d+) · (.+)$/.exec(raw);
+  var count=includeCredits&&availableCredits!==null?'↻ '+availableCredits+' '+(availableCredits===1?'use':'uses'):'';
+  var expiry=count&&availableCredits>0?' · '+(resetCreditExpirations.length?'Expires ':'')+resetCreditExpiryText():'';
+  var countdown=match?match[2]:'';
+  if(typeof canUseRecentQuotaDisplay==='function'&&canUseRecentQuotaDisplay())
+    countdown='Last update '+maoMaoYunTrafficTimeLabel(usageLastGoodAt*1000,Date.now());
+  return {date:match?match[1]:'',message:match?'':raw,countdown:countdown,credits:count,expiry:expiry};
+}
+
+// Shared VPN action strip above transparent rows. Keep controls as
+// siblings of the data views so login hit testing cannot swallow their clicks.
+registerMenuViewSubclass({
+  name: 'CodexUsageMeterMetricsPairView',
+  superclass: 'NSView',
+  methods: {
+    'drawRect:': {
+      implementation: function() {
+        var line=$.NSBezierPath.bezierPath,geometry=dashboardMetricLayout(MENU_WIDTH,'traffic'),quotaHeight=quotaCardLayout().height;
+        // Draw both boundaries inside existing gaps; do not add menu height.
+        [quotaHeight+geometry.gap/2,quotaHeight+geometry.gap+geometry.height+2].forEach(function(y){
+          line.moveToPoint($.NSMakePoint(16,y));
+          line.lineToPoint($.NSMakePoint(MENU_WIDTH-16,y));
+        });
+        line.lineWidth=.5;
+        sendVoid($.NSColor.whiteColor.colorWithAlphaComponent(.16),'setStroke');sendVoid(line,'stroke');
+      }
+    }
+  }
+});
+
+registerMenuViewSubclass({
   name: 'CodexUsageMeterCardView',
   superclass: 'NSView',
   methods: {
@@ -83,34 +100,32 @@ ObjC.registerSubclass({
         var width = bounds.size.width;
         
         var colors = cardColors();
-        var bodyColor = colors.body;
         var mutedColor = colors.muted;
 
         var rows = quotaWindows;
-        // Each quota has one primary line (window label and remaining value),
-        // then a slim bar and its reset schedule. This removes duplicate
-        // percentage text while keeping the remaining amount immediately scannable.
+        var forecasts = currentQuotaForecasts();
         var layout = quotaCardLayout();
         for (var i = 0; i < rows.length; i++) {
           var state = rows[i];
           var row = layout.rows[i];
           var hasValue = state.remaining !== null && state.remaining !== undefined;
           var remainingValue = hasValue ? state.remaining : 0;
-          var percentageColor = !hasValue ? mutedColor :
+          var recent=typeof canUseRecentQuotaDisplay==='function'&&canUseRecentQuotaDisplay();
+          var stale=(usageSyncState==='cached'||usageSyncState==='error')&&!recent;
+          var percentageColor = !hasValue || stale ? mutedColor :
             quotaCardColor(quotaTone(remainingValue), true);
-          drawCardText(state.label, 16, row.titleY, width - 32, 12, bodyColor, true);
-          drawCardTextRight(
-            quotaValueLabel(state, usageSyncState),
-            width - 16, row.titleY, 12, percentageColor, true
-          );
-          drawRoundedBar(16, row.barY, width - 32, layout.barHeight, hasValue ? remainingValue / 100 : 0.02);
-          if (i === rows.length - 1) {
-            drawCardTextWithTrailingText(
-              quotaResetLabel(state), inlineResetCreditText(),
-              16, row.resetY, width - 32, 9, mutedColor
-            );
-          } else {
-            drawCardText(quotaResetLabel(state), 16, row.resetY, width - 32, 9, mutedColor, false);
+          var summary = quotaForecastSummary(state, forecasts[i], Date.now()/1000);
+          drawMetricDashboard({title:state.label,window:state,context:'',hasValue:hasValue,stale:stale,
+            value:hasValue?state.remaining+'%':quotaValueLabel(state,usageSyncState),valueColor:percentageColor,
+            fraction:remainingValue/100,
+            actual:typeof observedQuotaUseLabel==='function'?observedQuotaUseLabel(state):'',footer:quotaResetLabel(state),
+            footerParts:quotaFooterParts(state,i===rows.length-1),summary:summary},
+            width,row.offset);
+          if(i<rows.length-1){
+            var separator=$.NSBezierPath.bezierPath;
+            separator.moveToPoint($.NSMakePoint(16,row.offset-6));
+            separator.lineToPoint($.NSMakePoint(width-16,row.offset-6));separator.lineWidth=.5;
+            sendVoid(cardColor(.54,.55,.58,.24),'setStroke');sendVoid(separator,'stroke');
           }
         }
       }
@@ -122,7 +137,7 @@ ObjC.registerSubclass({
 // the surrounding item type. A compact custom divider gives every section
 // the same 12pt vertical rhythm and the same 16pt horizontal inset as the
 // quota card.
-ObjC.registerSubclass({
+registerMenuViewSubclass({
   name: 'CodexUsageMeterDividerView',
   superclass: 'NSView',
   methods: {
@@ -140,89 +155,46 @@ ObjC.registerSubclass({
   }
 });
 
-// The VPN control is a secondary utility, so give it a quieter custom row
-// instead of presenting it like a checked primary menu command.
-ObjC.registerSubclass({
-  name: 'CodexUsageMeterVPNView',
+// Read-only account traffic belongs to the VPN utility, not the Codex quotas.
+// Keep a fixed height: background website refreshes must not relayout NSMenu.
+registerMenuViewSubclass({
+  name: 'CodexUsageMeterVPNTrafficView',
   superclass: 'NSView',
   methods: {
-    'drawRect:': {
-      implementation: function() {
-        var bounds = this.bounds;
-        var colors = cardColors();
-        var dotColor = colors.muted;
-        var dotDiameter = 6;
-        var transitioning = maomaoyunStatus === 'connecting' || maomaoyunStatus === 'disconnecting';
-        if (maomaoyunStatus === 'connected') {
-          dotColor = activeAccentColor(1.0);
-        } else if (transitioning) {
-          // A small, bounded pulse makes the in-progress state legible
-          // without shifting the row or leaving a stale dot after completion.
-          var phase = (Date.now() % 900) / 900;
-          var pulse = (Math.sin(phase * Math.PI * 2) + 1) / 2;
-          dotDiameter = 5.2 + pulse * 1.6;
-          dotColor = cardColor(0.96, 0.68, 0.25, 0.58 + pulse * 0.42);
-        } else if (maomaoyunStatus === 'error') {
-          dotColor = cardColor(0.95, 0.42, 0.44, 1.0);
-        }
-
-        var dot = $.NSBezierPath.bezierPathWithOvalInRect(
-          $.NSMakeRect(16 + (6 - dotDiameter) / 2, Math.max(0, (bounds.size.height - dotDiameter) / 2), dotDiameter, dotDiameter)
-        );
-        sendVoid(dotColor, 'setFill');
-        sendVoid(dot, 'fill');
-        drawCardText('MaoMaoYun', 30, 5, Math.max(0, bounds.size.width - 180), 10, colors.muted, false);
-        drawCardTextRight(
-          maomaoyunStatusLabel(),
-          bounds.size.width - 38,
-          5,
-          10,
-          colors.muted,
-          false
-        );
-        drawCardText('↗', bounds.size.width - 27, 5, 12, 10, colors.muted, false);
-      }
-    },
     'mouseDown:': {
       types: ['void', ['id']],
-      implementation: function(event) {
-        try {
-          var localX = event.locationInWindow.x - this.frame.origin.x;
-          if (localX >= this.bounds.size.width - 36) {
-            openMaoMaoYunApp();
-            return;
-          }
-        } catch (error) {
-          // If AppKit supplies no usable coordinates, preserve the primary
-          // row action instead of making the VPN control unresponsive.
-        }
-        toggleMaoMaoYun();
+      implementation: function() {
+        if (!maoMaoYunTrafficNeedsLogin(maomaoyunTrafficSourceState)) return;
+        // End native menu tracking before opening the explicit login window.
+        if (menu) sendVoid(menu, 'cancelTracking');
+        signInMaoMaoYunAccount();
       }
-    }
-  }
-});
-
-// Keep the Pinned label on its own compact row instead of using an ordinary
-// NSMenuItem. A normal item keeps the full menu-command height even when its
-// text is small, which is what made the section feel too loose above and
-// below. The fixed 18pt row gives the label deliberate, balanced breathing
-// room while leaving the task rows at their native height.
-ObjC.registerSubclass({
-  name: 'CodexUsageMeterPinnedHeaderView',
-  superclass: 'NSView',
-  methods: {
+    },
+    'accessibilityPerformPress': {
+      types: ['bool', []],
+      implementation: function() {
+        if (!maoMaoYunTrafficNeedsLogin(maomaoyunTrafficSourceState)) return false;
+        if (menu) sendVoid(menu, 'cancelTracking');
+        signInMaoMaoYunAccount();
+        return true;
+      }
+    },
     'drawRect:': {
       implementation: function() {
-        var bounds = this.bounds;
-        drawCardText(
-          'Pinned',
-          16,
-          2,
-          Math.max(0, bounds.size.width - 32),
-          10,
-          cardColors().muted,
-          false
-        );
+        var width = this.bounds.size.width;
+        var colors = cardColors();
+        var forecast=typeof currentMaoMaoYunForecast==='function'?currentMaoMaoYunForecast(maomaoyunTrafficSnapshot,maomaoyunHistorySnapshot,Date.now()):
+          maoMaoYunTrafficForecast(maomaoyunTrafficSnapshot,maomaoyunHistorySnapshot,Date.now());
+        var presentation = maoMaoYunTrafficPresentation(maomaoyunTrafficSnapshot, maomaoyunTrafficSourceState, Date.now(), maomaoyunHistorySnapshot,forecast);
+        var valueColor = presentation.hasValue && !presentation.stale ?
+          quotaCardColor(quotaTone(presentation.fraction * 100), true) : colors.muted;
+        var summary = trafficForecastSummary(maomaoyunTrafficSnapshot,presentation,
+          forecast);
+        drawMetricDashboard({kind:'traffic',title:'Traffic',context:'',
+          resetDays:maomaoyunTrafficSnapshot?maomaoyunTrafficSnapshot.resetDays:null,hasValue:presentation.hasValue,
+          stale:presentation.stale,value:maomaoyunTrafficSnapshot?maomaoyunTrafficSnapshot.remainingLabel:presentation.value,
+          valueColor:valueColor,fraction:presentation.fraction,detail:presentation.todayUsage,
+          footer:presentation.detail,summary:summary},width,0);
       }
     }
   }
@@ -243,8 +215,13 @@ function usageCardSnapshotKey() {
     windows: quotaWindows,
     credits: availableCredits,
     creditExpirations: resetCreditExpirations,
+    resetCards:typeof resetCreditCards==='undefined'?[]:resetCreditCards,
     sync: usageSyncState,
-    minute: Math.floor(Date.now() / 60000)
+    forecasts: currentQuotaForecasts().map(function(forecast,index) {
+      return {text:forecast.text,summary:quotaForecastSummary(quotaWindows[index],forecast,Date.now()/1000)};
+    }),
+    minute: Math.floor(Date.now() / 60000),
+    observed:typeof observedQuotaUseLabel==='function'?quotaWindows.map(observedQuotaUseLabel):[]
   });
 }
 
@@ -258,68 +235,127 @@ function redrawUsageCardIfNeeded(force) {
     // menu or leave a blank row where an absent Session used to be.
     usageCardView.setFrameSize($.NSMakeSize(MENU_WIDTH, height));
   }
+  layoutMetricsPair();
   renderState.usageCardSnapshotKey = key;
+  var forecasts = currentQuotaForecasts();
+  var creditText = inlineResetCreditText();
+  usageCardView.accessibilityLabel = quotaWindows.map(function(window, index) {
+    var summary = quotaForecastSummary(window,forecasts[index],Date.now()/1000);
+    var detail=/^Budget\b/.test(summary.detail||'')?(forecasts[index].reason||''):summary.detail;
+    var forecastText=/^Budget\b/.test(forecasts[index].text||'')?'':forecasts[index].text||'';
+    var text = window.label + ': ' + quotaValueLabel(window, usageSyncState) + '. ' + summary.headline + '. ' + detail + '. ' + quotaResetLabel(window) + '. ' + forecastText + '. ' + (forecasts[index].reason || '');
+    if(typeof quotaPaceModel==='function'){
+      var pace=quotaPaceModel(window,Date.now()/1000,usageSyncState!=='ready');
+      var localize=typeof uiText==='function'?uiText:function(value){return value;};
+      text+='. '+localize(pace.label);
+    }
+    if(typeof currentObservedQuotaUse==='function') {
+      var observed=currentObservedQuotaUse(window);
+      text+='. '+observedQuotaUseLabel(window)+(observed?'. Measured over '+forecastDuration(observed.observedSeconds):'');
+    }
+    return typeof uiText === 'function' ? uiText(text) : text;
+  }).join('. ');
+  if (creditText) usageCardView.accessibilityLabel = ObjC.unwrap(usageCardView.accessibilityLabel) + '. ' +
+    (typeof uiText === 'function' ? uiText(creditText) : creditText);
   if (usageCardView) usageCardView.setNeedsDisplay(true);
+  if(typeof updateResetCardsMenu==='function')updateResetCardsMenu();
+}
+
+// Keep both real child views: their hit regions, account-login action and
+// accessibility remain independent even though NSMenu owns one row.
+function layoutMetricsPair() {
+  if(typeof metricsPairView==='undefined'||!metricsPairView||!usageCardView||!maomaoyunTrafficView)return;
+  var geometry=dashboardMetricLayout(MENU_WIDTH,'traffic'),quotaHeight=quotaCardLayout().height;
+  var trafficY=quotaHeight+geometry.gap,stripY=trafficY+geometry.height+4,height=stripY+32+2;
+  usageCardView.setFrame($.NSMakeRect(0,0,MENU_WIDTH,quotaHeight));
+  maomaoyunTrafficView.setFrame($.NSMakeRect(0,trafficY,MENU_WIDTH,geometry.height));
+  // Compensate for NSMenu's extra top air: lift the whole control group 2pt,
+  // including hover/hit regions, without moving the divider or changing height.
+  maomaoyunView.setFrame($.NSMakeRect(MENU_WIDTH-62,stripY+2,62,32));
+  vpnAppButton.setFrameOrigin($.NSMakePoint(8,stripY+6));
+  metricsPairView.setFrameSize($.NSMakeSize(MENU_WIDTH,height));
+  metricsPairView.needsDisplay=true;
 }
 
 // Build the established native menu in one place, after the delegate and icon exist.
 function buildMenu() {
+  clearMenuRowHover();
+  metricsPairView=null;
+  if (typeof localizedMenuItems !== 'undefined') localizedMenuItems = [];
   menu = $.NSMenu.alloc.init;
   // These actions target the local JXA delegate. Disable AppKit's automatic
   // responder validation so the menu cannot gray out while Codex is in the
   // background or while the usage reader is still loading.
   menu.autoenablesItems = false;
 
-  // Keep the VPN switch at the top of the menu, separated from the regular
-  // actions by the same native-style divider used throughout the menu.
-  maomaoyunView = $.CodexUsageMeterVPNView.alloc.initWithFrame($.NSMakeRect(0, 0, MENU_WIDTH, 26));
-  maomaoyunView.toolTip = 'Click the row to toggle VPN; click ↗ to open MaoMaoYun';
+  // Transparent toolbar: client name on the left and switch on the
+  // right. Each control remains a separate sibling above the account views.
+  maomaoyunView = $.CodexUsageMeterVPNView.alloc.initWithFrame($.NSMakeRect(MENU_WIDTH-62,4,62,32));
   maomaoyunItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('MaoMaoYun  ·  Checking', null, '');
-  maomaoyunItem.view = maomaoyunView;
   maomaoyunItem.enabled = true;
-  maomaoyunItem.toolTip = 'Click the row to toggle VPN; click ↗ to open MaoMaoYun';
-  menu.addItem(maomaoyunItem);
-  menu.addItem(menuDividerItem());
+  if (typeof uiText === 'function') {
+    maomaoyunItem.title = uiText('MaoMaoYun  ·  Checking');
+  }
+  var metricWidth=MENU_WIDTH;
+  maomaoyunTrafficView = $.CodexUsageMeterVPNTrafficView.alloc.initWithFrame($.NSMakeRect(0, 0, metricWidth, dashboardMetricLayout(metricWidth,'traffic').height));
+  maomaoyunTrafficView.accessibilityElement = true;
+  maomaoyunTrafficView.accessibilityRole = 'AXGroup';
+  vpnAppButton=makeVPNClientButton(8);
+  maomaoyunTrafficItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('Traffic · Checking', null, '');
+  maomaoyunTrafficItem.enabled = false;
+  updateMaoMaoYunTrafficMenuItem();
 
-  var newTaskItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('New Task', 'newTask:', '');
-  newTaskItem.target = delegate;
-  newTaskItem.enabled = true;
+  var newTaskItem = makeMenuActionItem('New Task','newTask:');
 
   // Keep the action rows compact: New Task followed by the ChatGPT web shortcut.
-  var openChatGPTItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('Ask ChatGPT', 'openChatGPTWeb:', '');
-  openChatGPTItem.target = delegate;
-  openChatGPTItem.enabled = true;
+  var openChatGPTItem = makeMenuActionItem('Ask ChatGPT','openChatGPTWeb:');
 
-  // A custom view lets each quota window keep a small, airy hierarchy—label,
-  // progress bar, then reset countdown—without adding another background layer.
-  usageCardView = $.CodexUsageMeterCardView.alloc.initWithFrame($.NSMakeRect(0, 0, MENU_WIDTH, quotaCardLayout().height));
+  // Independent children preserve each row's drawing, help and login hit
+  // region while the native menu continues to own tracking and dismissal.
+  usageCardView = $.CodexUsageMeterCardView.alloc.initWithFrame($.NSMakeRect(0, 0, metricWidth, quotaCardLayout().height));
+  usageCardView.accessibilityElement = true;
+  usageCardView.accessibilityRole = 'AXStaticText';
   usageCardView.setNeedsDisplay(true);
+  metricsPairView=$.CodexUsageMeterMetricsPairView.alloc.initWithFrame($.NSMakeRect(0,0,MENU_WIDTH,quotaCardLayout().height));
+  metricsPairView.addSubview(usageCardView);
+  metricsPairView.addSubview(maomaoyunTrafficView);
+  metricsPairView.addSubview(maomaoyunView);
+  metricsPairView.addSubview(vpnAppButton);
+  layoutMetricsPair();
   var usageCardItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('', null, '');
-  usageCardItem.view = usageCardView;
-  usageCardItem.enabled = false;
+  usageCardItem.view = metricsPairView;
+  // The traffic child can open account login; do not disable its enclosing row.
+  usageCardItem.enabled = true;
   menu.addItem(usageCardItem);
+  if(typeof addMeterPanelsMenu==='function')addMeterPanelsMenu();
 
   // Keep the quota block above the task shortcuts, with one divider marking the
   // boundary between the two sections.
-  menu.addItem(menuDividerItem());
   menu.addItem(newTaskItem);
   menu.addItem(openChatGPTItem);
 
-  // The Pinned area shares one anchor divider. updateTaskSectionsMenu keeps
-  // this separator before Restart Widget even when there are no pinned rows.
-  pinnedAnchorDividerItem = menuDividerItem();
-  pinnedAnchorDividerItem.hidden = true;
-  menu.addItem(pinnedAnchorDividerItem);
+  menu.addItem(menuDividerItem());
 
-  var restartItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('Restart Widget', 'restartMeter:', '');
-  restartItem.target = delegate;
-  restartItem.enabled = true;
+  preferencesExpanded = false;
+  preferencesReveal = 0;
+  preferencesDisclosureItem = makeStatusDisplayControlItem('Preferences', 200);
+  menu.addItem(preferencesDisclosureItem);
+  addStatusDisplayMenuItems();
+
+  if (typeof updateLanguageMenu === 'function') {
+    languageExpanded=false;languageReveal=0;languageMenuItems={};
+    languageMenuItem = makeStatusDisplayControlItem('Language',100);
+    languageMenuItem.hidden = true;
+    menu.addItem(languageMenuItem);
+    [['zh-CN','简体中文',101],['en','English',102]].forEach(function(option) {
+      var item=makeStatusDisplayControlItem(option[1],option[2]);
+      item.hidden=true;menu.addItem(item);languageMenuItems[option[0]]=item;
+    });
+    updateLanguageMenu();
+  }
+
+  var restartItem = makeMenuActionItem('Restart Widget','restartMeter:');
   menu.addItem(restartItem);
-
-  var quitItem = $.NSMenuItem.alloc.initWithTitleActionKeyEquivalent('Quit Codex', 'quitCodex:', '');
-  quitItem.target = delegate;
-  quitItem.enabled = true;
-  menu.addItem(quitItem);
 
   menu.delegate = delegate;
   // Let AppKit own presentation, focus, and click-away dismissal.

@@ -70,10 +70,10 @@ tasks.startRunningTasksRead();
 assert(sql);
 const fixture = `
 ATTACH DATABASE ':memory:' AS state_db;
-CREATE TABLE state_db.threads(id TEXT,archived INTEGER);
+CREATE TABLE state_db.threads(id TEXT,archived INTEGER,rollout_path TEXT);
 CREATE TABLE thread_turns(thread_id TEXT,turn_id TEXT,status TEXT,started_at INTEGER,rollout_ordinal INTEGER);
 CREATE TABLE thread_items(thread_id TEXT,turn_id TEXT,created_at_ms INTEGER);
-INSERT INTO state_db.threads VALUES ('old',0),('finished',0),('long',0);
+INSERT INTO state_db.threads(id,archived) VALUES ('old',0),('finished',0),('long',0);
 INSERT INTO thread_turns VALUES ('old','1','inProgress',100,1),('finished','1','inProgress',100,1),('finished','2','completed',1900,2),('long','1','inProgress',100,1);
 INSERT INTO thread_items VALUES ('long','1',1950000);
 `;
@@ -131,14 +131,6 @@ assert.equal(vpn.vpnOperation,null);
 assert.equal(vpn.maomaoyunStatus,'error');
 console.log('Regression checks passed: quota validation, execution activity, VPN sequence/deadline.');
 
-tasks.menu = {};
-tasks.pinnedAnchorDividerItem = {hidden:true};
-tasks.pinnedMenuItems = [];
-tasks.pinnedThreadsSnapshot = [];
-vm.runInContext(read('pinned-menu'),tasks);
-tasks.updateTaskSectionsMenu();
-assert.equal(tasks.pinnedAnchorDividerItem.hidden,false);
-
 let clock = 1000;
 const icon = vm.createContext({
  Date:{now:()=>clock},Math,hasRunningTasks:true,isExiting:false,
@@ -165,6 +157,7 @@ assert.equal(icon.quotaRingAnimationTimer,null);
 // A failed refresh during a quota transition must retain the valid target,
 // preserve the activity animation, and recover on the next valid payload.
 vm.runInContext(read('usage-cache')+'\n'+read('usage'),icon);
+icon.recordQuotaForecast=()=>{};
 icon.quotaWindows=[{label:'Session',durationMins:300,remaining:73,resetAt:123},{label:'Weekly',durationMins:10080,remaining:86,resetAt:456}];
 icon.normalizeUsage=core.normalizeUsage;
 icon.gaugeQuotaWindow=core.gaugeQuotaWindow;
@@ -206,7 +199,7 @@ icon.quotaWindows=[{label:'Quota',durationMins:null,remaining:null,resetAt:null}
 icon.showUsageError();
 assert.equal(icon.statusIconQuotaFraction,0.02);
 assert.equal(icon.usageText,'!');
-console.log('Regression checks passed: empty Pinned divider, concurrent icon animation, stale quota preservation/recovery.');
+console.log('Regression checks passed: concurrent icon animation, stale quota preservation/recovery.');
 
 // Exercise request coalescing, failure presentation during retries, the new
 // watchdog, cache restore, and a response that races with an account switch.
@@ -214,6 +207,7 @@ let usageClock=1000,account='account-a',launched=0,terminated=0;
 const saved=[];
 const usage=vm.createContext({
  Date:{now:()=>usageClock},usageAccountId:null,usageCachePath:'unused',
+ restoreForecastHistory(){},recordQuotaForecast(){},
  quotaWindows:[{label:'Quota',durationMins:null,remaining:null,resetAt:null}],
  usageSyncState:'loading',usageText:'!',refreshState:{task:null,queued:false},
  usagePollTimer:null,USAGE_READ_TIMEOUT_MS:50000,
@@ -271,53 +265,66 @@ usage.requestUsageRefresh();assert.equal(usage.usageSyncState,'error');
 console.log('Regression checks passed: account-isolated cache validation, stale retries, coalescing, account switch race and 50s watchdog.');
 
 // Test the actual layout and drawing: a missing Session must not reserve a
-// second row, and reset credits still belong to the bottom visible row.
+// second row, and the removed quota statistics reserve no space.
 const definitions={};
 const card=vm.createContext({
- ObjC:{registerSubclass(def){definitions[def.name]=def;}},
- $:{NSMakeSize(width,height){return {width,height};}},
- quotaWindows:swapped.windows,QUOTA_SPACING_UNIT:2,MENU_WIDTH:330,
+ ObjC:{unwrap:value=>value,registerSubclass(def){definitions[def.name]=def;}},
+ $:Object.assign(value=>({sizeWithAttributes(){return {width:String(value).length*7};}}),{NSMakeSize(width,height){return {width,height};}}),
+ quotaWindows:swapped.windows,MENU_WIDTH:360,
  usageSyncState:'ready',availableCredits:3,resetCreditExpirations:[2000000000],
  renderState:{usageCardSnapshotKey:null},quotaValueLabel:core.quotaValueLabel,
  QUOTA_WARNING_THRESHOLD:20,QUOTA_CRITICAL_THRESHOLD:5
 });
-vm.runInContext(read('appearance')+'\n'+read('menu'),card);
+card.currentQuotaForecasts=()=>card.quotaWindows.map(()=>({text:'Budget 13%/day · learning',budget:'Budget 13%/day',reason:'Need observation history'}));
+vm.runInContext(read('meter-panels-core')+'\n'+read('forecast-display')+'\n'+read('appearance')+'\n'+read('dashboard')+'\n'+read('menu-rows')+'\n'+read('menu'),card);
 assert.equal(card.quotaCardLayout().rows.length,2);
-assert.equal(card.quotaCardLayout().height,93);
+assert.equal(card.quotaCardLayout().height,136);
 card.quotaWindows=weeklyOnly.windows;
 assert.equal(card.quotaCardLayout().rows.length,1);
-assert.equal(card.quotaCardLayout().height,48);
+assert.equal(card.quotaCardLayout().height,64);
 card.usageCardView={frame:{size:{height:93}},setFrameSize(size){this.frame.size=size;},setNeedsDisplay(){}};
 card.redrawUsageCardIfNeeded(false);
-assert.equal(card.usageCardView.frame.size.height,48);
-const titles=[],trailing=[];
+assert.equal(card.usageCardView.frame.size.height,64);
+const titles=[];
 card.cardColors=()=>({body:'body',muted:'muted'});
 card.quotaCardColor=()=> 'color';
+card.cardAttributes=()=>({});
 card.drawCardText=text=>{titles.push(text);};
 card.drawCardTextRight=()=>{};
 card.drawRoundedBar=()=>{};
-card.drawCardTextWithTrailingText=(left,right)=>{trailing.push(right);};
+card.drawDashboardRing=()=>{};
+card.drawDashboardValue=(text,x,y,width)=>({x:x+width-40});
+card.drawMeterStatusIcon=()=>true; // Real SF Symbol drawing is checked in meter-panels-ui.
+card.dashboardValueAttributes=()=>({});
+card.cardFont=card.statusQuotaFont=()=>({ascender:10,capHeight:8});
+card.uiLanguage='en';card.uiText=text=>text;
+// The statistic row's drawing primitives are covered by native AppKit tests;
+// keep this VM fixture focused on data and visible-label semantics.
+card.$.NSMakeRect=(x,y,width,height)=>({origin:{x,y},size:{width,height}});
+card.$.NSMakePoint=(x,y)=>({x,y});
+card.$.NSBezierPath={bezierPathWithRoundedRectXRadiusYRadius(){return {};},bezierPath:{moveToPoint(){},lineToPoint(){}}};
+card.$.NSColor={colorWithCalibratedRedGreenBlueAlpha(){return {};},whiteColor:{colorWithAlphaComponent(){return {};}}};
+card.sendVoid=()=>{};
 definitions.CodexUsageMeterCardView.methods['drawRect:'].implementation.call({bounds:{size:{width:330}}});
-assert.deepEqual(titles,['Weekly']);
-assert.equal(trailing.length,1);
-assert.match(trailing[0],/3 uses/);
+assert(titles.includes('Codex Weekly'));assert(!titles.includes('Current remaining'));
+assert(!titles.some(t=>['Est. reserve','Daily avg.','Hourly use','Resets','Budget 13%/day'].includes(t)));
 card.usageSyncState='cached';assert.equal(card.quotaResetLabel(card.quotaWindows[0]),'Cached value · updating');
 card.usageSyncState='error';assert.equal(card.quotaResetLabel({remaining:null}),'Update failed · retrying');
 card.availableCredits=null;assert.equal(card.inlineResetCreditText(),'');
 card.quotaWindows=swapped.windows;
 card.redrawUsageCardIfNeeded(false);
-assert.equal(card.usageCardView.frame.size.height,93);
+assert.equal(card.usageCardView.frame.size.height,136);
 console.log('Regression checks passed: duration-based windows, weekly-only gauge, dynamic card height and reset credits.');
 
 // Exercise the native resize bridge with both one and two quota rows.
 const nativeCard=execFileSync('/usr/bin/osascript',['-l','JavaScript','-e',
  readLibrarySource()+
- "\nusageCardView=$.CodexUsageMeterCardView.alloc.initWithFrame($.NSMakeRect(0,0,MENU_WIDTH,quotaCardLayout().height));"+
+ "\nMENU_WIDTH=360;usageCardView=$.CodexUsageMeterCardView.alloc.initWithFrame($.NSMakeRect(0,0,MENU_WIDTH,quotaCardLayout().height));"+
  "quotaWindows=normalizeUsage("+JSON.stringify(payload(quotaWindow(10080)))+").windows;redrawUsageCardIfNeeded(true);var single=Number(usageCardView.frame.size.height);"+
  "quotaWindows=normalizeUsage("+JSON.stringify(payload(quotaWindow(300),quotaWindow(10080)))+").windows;redrawUsageCardIfNeeded(true);"+
  "JSON.stringify({single:single,double:Number(usageCardView.frame.size.height)});"
 ],{encoding:'utf8',timeout:5000});
-assert.deepEqual(JSON.parse(nativeCard),{single:48,double:93});
+assert.deepEqual(JSON.parse(nativeCard),{single:64,double:136});
 console.log('Regression check passed: native AppKit quota card resizing.');
 
 // Exercise the real Foundation bridge: null attributes previously raised an
@@ -344,7 +351,7 @@ try {
  const authPath=path.join(fakeHome,'auth.json'),cachePath=path.join(cacheRoot,'cache','quota.json');
  fs.writeFileSync(authPath,JSON.stringify({auth_mode:'chatgpt',tokens:{account_id:'test-account',access_token:'never-persist-this'}}));
  const nativeSource=[readLibrarySource(),
-  'usageCachePath='+JSON.stringify(cachePath)+';logError=function(){};animateStatusIconQuota=function(){};updateUsageLabel=function(t){usageText=t;};'].join('\n');
+  'usageCachePath='+JSON.stringify(cachePath)+';forecastHistoryPath='+JSON.stringify(path.join(cacheRoot,'cache','forecast.json'))+';logError=function(){};animateStatusIconQuota=function(){};updateUsageLabel=function(t){usageText=t;};'].join('\n');
  const runNative=code=>JSON.parse(execFileSync('/usr/bin/osascript',['-l','JavaScript','-e',nativeSource+'\n'+code],
   {encoding:'utf8',timeout:5000,env:{...process.env,CODEX_HOME:fakeHome}}));
  const written=runNative('syncUsageAccount();applyUsagePayload('+JSON.stringify(payload(quotaWindow(10080,12)))+');JSON.stringify({state:usageSyncState,identified:usageAccountId!==null});');

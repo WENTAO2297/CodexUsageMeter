@@ -9,10 +9,18 @@ function startRunningTasksRead() {
       '-noheader',
       runningTasksPath,
       "ATTACH DATABASE '" + taskStateDatabasePath.replace(/'/g, "''") + "' AS state_db; " +
+        // A desktop conversation can retain its ID after switching to another
+        // rollout. Its current turns are then keyed by the rollout's UUID,
+        // not the conversation ID. Prefer that history when it exists; do
+        // not combine it with an old, possibly unfinished conversation turn.
+        "WITH current_threads AS (SELECT s.id, coalesce((SELECT h.thread_id " +
+        "FROM thread_turns h WHERE substr(s.rollout_path,-6)='.jsonl' " +
+        "AND h.thread_id=substr(s.rollout_path,-42,36) LIMIT 1),s.id) AS execution_id " +
+        "FROM state_db.threads s WHERE s.archived=0) " +
         "SELECT coalesce(max(t.started_at, coalesce((SELECT max(i.created_at_ms)/1000 " +
         "FROM thread_items i WHERE i.thread_id=t.thread_id AND i.turn_id=t.turn_id),0)),0) " +
-        "FROM thread_turns t JOIN state_db.threads s ON s.id=t.thread_id " +
-        "WHERE s.archived=0 AND t.status='inProgress' AND t.rollout_ordinal=" +
+        "FROM thread_turns t JOIN current_threads s ON s.execution_id=t.thread_id " +
+        "WHERE t.status='inProgress' AND t.rollout_ordinal=" +
         "(SELECT max(n.rollout_ordinal) FROM thread_turns n WHERE n.thread_id=t.thread_id);"
 
 
@@ -70,83 +78,5 @@ function pollRunningTasksRead() {
   if (runningReadState.queued) {
     runningReadState.queued = false;
     requestRunningTasksRead();
-  }
-}
-
-// ===== Fixed threads ========================================================
-// Codex stores the user's pinned conversations in the local state database.
-// Read only the pinned section so this menu can follow pin/unpin changes
-// without adding a second running-task section that was intentionally removed.
-var pinnedTasksPath = codexDirectory + '/state_5.sqlite';
-var pinnedTasksRevisionValue = null;
-var PINNED_TASK_READ_TIMEOUT_MS = 5000;
-var PINNED_THREADS_QUERY =
-  "SELECT id || char(9) || replace(replace(replace(coalesce(nullif(name, ''), title), char(9), ' '), char(10), ' '), char(13), ' ') " +
-  "FROM threads WHERE archived = 0 AND (is_pinned = 1 OR thread_section_id IN " +
-  "(SELECT id FROM thread_sections WHERE name = 'Pinned')) " +
-  "ORDER BY CASE WHEN section_position IS NULL THEN 2147483647 ELSE section_position END, updated_at_ms DESC;";
-
-function resetPinnedThreadsRead() {
-  resetBackgroundTask(pinnedReadState);
-}
-
-function startPinnedThreadsRead(revision) {
-  try {
-    launchBackgroundTask(
-      '/usr/bin/sqlite3',
-      ['-readonly', '-noheader', pinnedTasksPath, PINNED_THREADS_QUERY],
-      pinnedReadState,
-      false
-    );
-    pinnedReadState.revision = revision;
-  } catch (error) {
-    logError('pinned-task-launch', error);
-    resetPinnedThreadsRead();
-  }
-}
-
-function requestPinnedThreadsRead(force) {
-  var revision = combinedRevision([pinnedTasksPath, pinnedTasksPath + '-wal']);
-  if (!force && revision === pinnedTasksRevisionValue) return;
-  if (pinnedReadState.task) {
-    pinnedReadState.queued = true;
-    return;
-  }
-  startPinnedThreadsRead(revision);
-}
-
-function pollPinnedThreadsRead() {
-  var task = pinnedReadState.task;
-  if (!task) return;
-  if (task.running) {
-    if (Date.now() - pinnedReadState.startedAt > PINNED_TASK_READ_TIMEOUT_MS) {
-      sendVoid(task, 'terminate');
-    }
-    return;
-  }
-
-  var outputPipe = pinnedReadState.outputPipe;
-  var revision = pinnedReadState.revision;
-  resetPinnedThreadsRead();
-  try {
-    if (task.terminationStatus !== 0) throw new Error('The pinned-task reader exited unexpectedly.');
-    var raw = readBackgroundTaskOutput(outputPipe);
-    var threads = parsePinnedThreads(raw);
-    var snapshotKey = JSON.stringify(threads);
-    pinnedTasksRevisionValue = revision;
-    // Do not remove/reinsert identical rows on every polling tick. Rebuilding
-    // an unchanged NSMenu section is visible as a brief flicker while the
-    // menu is open.
-    if (snapshotKey !== pinnedTasksSnapshotKey) {
-      pinnedTasksSnapshotKey = snapshotKey;
-      updatePinnedTasksMenu(threads);
-    }
-  } catch (error) {
-    logError('pinned-tasks', error);
-  }
-
-  if (pinnedReadState.queued) {
-    pinnedReadState.queued = false;
-    requestPinnedThreadsRead(true);
   }
 }

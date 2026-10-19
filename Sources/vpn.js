@@ -27,13 +27,71 @@ function maomaoyunStatusLabel() {
   return 'Checking';
 }
 
+// The thumb follows the requested direction while the amber status dot and
+// dimmed track distinguish pending work from a confirmed connection.
+function vpnSwitchTarget() {
+  if (vpnSwitchPreviewValue !== null) return vpnSwitchPreviewValue;
+  return maomaoyunStatus === 'connected' || maomaoyunStatus === 'connecting' ? 1 : 0;
+}
+
+function previewVPNSwitch() {
+  if (isExiting) return;
+  vpnSwitchPreviewValue = vpnSwitchTarget() ? 0 : 1;
+  updateVPNSwitchAnimation();
+  if (maomaoyunView) maomaoyunView.needsDisplay = true;
+}
+
+function stopVPNSwitchAnimation() {
+  vpnSwitchAnimation.timer = stopTransientTimer(vpnSwitchAnimation.timer);
+  vpnSwitchAnimation.value = vpnSwitchAnimation.target = vpnSwitchTarget();
+  if (maomaoyunView) maomaoyunView.needsDisplay = true;
+}
+
+function stepVPNSwitchAnimation() {
+  var elapsed = Date.now() - vpnSwitchAnimation.startedAt;
+  var t = Math.max(0, Math.min(1, elapsed / 280));
+  if (!menuIsOpen || isExiting) {
+    stopVPNSwitchAnimation();
+    return;
+  }
+  if (elapsed < 0 || t >= 1 || statusDisplayReducedMotion()) {
+    vpnSwitchAnimation.timer = stopTransientTimer(vpnSwitchAnimation.timer);
+    vpnSwitchAnimation.value = vpnSwitchAnimation.target;
+    if (maomaoyunView) maomaoyunView.needsDisplay = true;
+    return;
+  }
+  // Smooth acceleration and braking: zero velocity/acceleration at both
+  // endpoints, unlike the previous fast-start cubic ease-out.
+  var eased = t * t * t * (t * (6 * t - 15) + 10);
+  vpnSwitchAnimation.value = vpnSwitchAnimation.from + (vpnSwitchAnimation.target - vpnSwitchAnimation.from) * eased;
+  if (maomaoyunView) maomaoyunView.needsDisplay = true;
+}
+
+function updateVPNSwitchAnimation() {
+  var target = vpnSwitchTarget();
+  if (!menuIsOpen || isExiting || statusDisplayReducedMotion()) {
+    stopVPNSwitchAnimation();
+    return;
+  }
+  if (target === vpnSwitchAnimation.target) return;
+  // Sample the previous trajectory before reversing a rapid manual toggle.
+  if (vpnSwitchAnimation.timer) stepVPNSwitchAnimation();
+  vpnSwitchAnimation.from = vpnSwitchAnimation.value;
+  vpnSwitchAnimation.target = target;
+  vpnSwitchAnimation.startedAt = Date.now();
+  vpnSwitchAnimation.timer = startTransientTimer(vpnSwitchAnimation.timer, 1 / 60, 'vpnSwitchAnimationTimer:');
+}
+
 function updateMaoMaoYunMenuItem() {
   if (!maomaoyunItem) return;
   // Keep an accessible fallback title while the visible custom row stays
   // compact and uses a subtle status dot instead of a checkmark.
   maomaoyunItem.title = 'MaoMaoYun  ·  ' + maomaoyunStatusLabel();
+  if (typeof uiText === 'function') maomaoyunItem.title = uiText(ObjC.unwrap(maomaoyunItem.title));
   maomaoyunItem.enabled = true;
+  updateVPNSwitchAnimation();
   if (maomaoyunView) maomaoyunView.setNeedsDisplay(true);
+  if (typeof vpnAppButton!=='undefined'&&vpnAppButton) vpnAppButton.needsDisplay=true;
 }
 
 function parseMaoMaoYunStatus(raw) {
@@ -62,6 +120,7 @@ function finishVPNOperation(ok) {
   vpnNextAttemptAt = 0;
   if (!ok) maomaoyunStatus = 'error';
   updateMaoMaoYunMenuItem();
+  if (typeof maoMaoYunTrafficVPNOperationFinished === 'function') maoMaoYunTrafficVPNOperationFinished();
 }
 
 function vpnFailure() {
@@ -86,6 +145,7 @@ function sendVPNCommand(action) {
 }
 
 function startMaoMaoYunAction(action, reconnect) {
+  if (!reconnect && typeof stopMaoMaoYunTrafficWakeRecovery === 'function') stopMaoMaoYunTrafficWakeRecovery();
   cancelBackgroundTask(maomaoyunActionState);
   cancelBackgroundTask(maomaoyunReadState);
   vpnOperation = { phase: action, reconnect: !!reconnect, attempts: 0, deadline: Date.now() + 60000 };
@@ -95,6 +155,7 @@ function startMaoMaoYunAction(action, reconnect) {
 function reconnectMaoMaoYunAfterWake() {
   if (Date.now() - vpnLastWakeAt < 5000) return;
   vpnLastWakeAt = Date.now();
+  if (typeof beginMaoMaoYunTrafficWakeRecovery === 'function') beginMaoMaoYunTrafficWakeRecovery(true);
   startMaoMaoYunAction('stop', true);
 }
 
@@ -167,7 +228,10 @@ function pollMaoMaoYunTasks() {
       Date.now() - maomaoyunLastStatusRequestAt >= MAOMAOYUN_TRANSITION_REFRESH_MS) {
     requestMaoMaoYunStatus(true);
   }
-  if (menuIsOpen && vpnOperation && maomaoyunView) maomaoyunView.setNeedsDisplay(true);
+  if (menuIsOpen && vpnOperation) {
+    if (maomaoyunView) maomaoyunView.setNeedsDisplay(true);
+    if (typeof vpnAppButton!=='undefined'&&vpnAppButton) vpnAppButton.needsDisplay=true;
+  }
   if (!vpnOperation && !maomaoyunReadState.task && !maomaoyunActionState.task) {
     maomaoyunPollTimer = stopTransientTimer(maomaoyunPollTimer);
   }

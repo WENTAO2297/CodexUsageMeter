@@ -1,0 +1,1765 @@
+{
+  "date": "2026-10-16",
+  "purpose": "Offline algorithm design only",
+  "quota": {
+    "historyDays": 11,
+    "anchors": 33,
+    "validIntervals": 8,
+    "intervalExposureDays": 6.801,
+    "evaluatedOrigins": 5,
+    "resetOrMissingTruth": 5,
+    "censored": 0,
+    "mode": "Reader replay before each cutoff; subsequent 18–30h same-segment actual usage; no full-reset accuracy claim",
+    "all": {
+      "oldToken": {
+        "evaluated": 3,
+        "availableOf": 5,
+        "mae": 12.517,
+        "bias": -6.042
+      },
+      "pooled": {
+        "evaluated": 3,
+        "availableOf": 5,
+        "mae": 12.922,
+        "bias": 0.402
+      },
+      "ewma3": {
+        "evaluated": 3,
+        "availableOf": 5,
+        "mae": 12.151,
+        "bias": 1.905
+      },
+      "blend": {
+        "evaluated": 3,
+        "availableOf": 5,
+        "mae": 12.453,
+        "bias": 1.305
+      }
+    },
+    "commonCount": 3,
+    "common": {
+      "oldToken": {
+        "evaluated": 3,
+        "availableOf": 3,
+        "mae": 12.517,
+        "bias": -6.042
+      },
+      "pooled": {
+        "evaluated": 3,
+        "availableOf": 3,
+        "mae": 12.922,
+        "bias": 0.402
+      },
+      "ewma3": {
+        "evaluated": 3,
+        "availableOf": 3,
+        "mae": 12.151,
+        "bias": 1.905
+      },
+      "blend": {
+        "evaluated": 3,
+        "availableOf": 3,
+        "mae": 12.453,
+        "bias": 1.305
+      }
+    }
+  },
+  "vpn": {
+    "reportedDays": 34,
+    "mode": "Retrospective final reported values with 48h availability lag; revisions at past cutoffs unknown",
+    "horizons": {
+      "1": {
+        "origins": 29,
+        "disjointTargets": 29,
+        "all": {
+          "oldP50": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.608,
+            "bias": -5.457
+          },
+          "oldP90": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 8.148,
+            "bias": -1.347
+          },
+          "mean7": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.388,
+            "bias": -3.491
+          },
+          "ewma3": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.23,
+            "bias": -3.32
+          },
+          "blend": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.212,
+            "bias": -3.874
+          },
+          "regime": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 8.054,
+            "bias": -2.088
+          }
+        },
+        "commonCount": 29,
+        "common": {
+          "oldP50": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.608,
+            "bias": -5.457
+          },
+          "oldP90": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 8.148,
+            "bias": -1.347
+          },
+          "mean7": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.388,
+            "bias": -3.491
+          },
+          "ewma3": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.23,
+            "bias": -3.32
+          },
+          "blend": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 7.212,
+            "bias": -3.874
+          },
+          "regime": {
+            "evaluated": 29,
+            "availableOf": 29,
+            "mae": 8.054,
+            "bias": -2.088
+          }
+        }
+      },
+      "3": {
+        "origins": 27,
+        "disjointTargets": 9,
+        "all": {
+          "oldP50": {
+            "evaluated": 25,
+            "availableOf": 27,
+            "mae": 22.893,
+            "bias": -19.466
+          },
+          "oldP90": {
+            "evaluated": 25,
+            "availableOf": 27,
+            "mae": 22.475,
+            "bias": -14.248
+          },
+          "mean7": {
+            "evaluated": 27,
+            "availableOf": 27,
+            "mae": 20.63,
+            "bias": -15.051
+          },
+          "ewma3": {
+            "evaluated": 27,
+            "availableOf": 27,
+            "mae": 20.16,
+            "bias": -14.433
+          },
+          "blend": {
+            "evaluated": 27,
+            "availableOf": 27,
+            "mae": 20.342,
+            "bias": -14.948
+          },
+          "regime": {
+            "evaluated": 27,
+            "availableOf": 27,
+            "mae": 21.148,
+            "bias": -12.647
+          }
+        },
+        "commonCount": 25,
+        "common": {
+          "oldP50": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 22.893,
+            "bias": -19.466
+          },
+          "oldP90": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 22.475,
+            "bias": -14.248
+          },
+          "mean7": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 21.561,
+            "bias": -16.974
+          },
+          "ewma3": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 21.181,
+            "bias": -16.179
+          },
+          "blend": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 21.329,
+            "bias": -16.785
+          },
+          "regime": {
+            "evaluated": 25,
+            "availableOf": 25,
+            "mae": 22.121,
+            "bias": -14.378
+          }
+        }
+      },
+      "7": {
+        "origins": 23,
+        "disjointTargets": 4,
+        "all": {
+          "oldP50": {
+            "evaluated": 17,
+            "availableOf": 23,
+            "mae": 55.857,
+            "bias": -52.253
+          },
+          "oldP90": {
+            "evaluated": 17,
+            "availableOf": 23,
+            "mae": 56.276,
+            "bias": -47.473
+          },
+          "mean7": {
+            "evaluated": 23,
+            "availableOf": 23,
+            "mae": 45.632,
+            "bias": -35.899
+          },
+          "ewma3": {
+            "evaluated": 23,
+            "availableOf": 23,
+            "mae": 45.134,
+            "bias": -36.466
+          },
+          "blend": {
+            "evaluated": 23,
+            "availableOf": 23,
+            "mae": 45.483,
+            "bias": -34.757
+          },
+          "regime": {
+            "evaluated": 23,
+            "availableOf": 23,
+            "mae": 45.402,
+            "bias": -33.343
+          }
+        },
+        "commonCount": 17,
+        "common": {
+          "oldP50": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 55.857,
+            "bias": -52.253
+          },
+          "oldP90": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 56.276,
+            "bias": -47.473
+          },
+          "mean7": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 56.045,
+            "bias": -54.262
+          },
+          "ewma3": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 56.67,
+            "bias": -53.731
+          },
+          "blend": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 56.526,
+            "bias": -52.034
+          },
+          "regime": {
+            "evaluated": 17,
+            "availableOf": 17,
+            "mae": 55.574,
+            "bias": -50.963
+          }
+        }
+      },
+      "28": {
+        "origins": 2,
+        "disjointTargets": 1,
+        "all": {
+          "oldP50": {
+            "evaluated": 0,
+            "availableOf": 2,
+            "mae": null,
+            "bias": null
+          },
+          "oldP90": {
+            "evaluated": 0,
+            "availableOf": 2,
+            "mae": null,
+            "bias": null
+          },
+          "mean7": {
+            "evaluated": 2,
+            "availableOf": 2,
+            "mae": 89.486,
+            "bias": -89.486
+          },
+          "ewma3": {
+            "evaluated": 2,
+            "availableOf": 2,
+            "mae": 104.432,
+            "bias": -104.432
+          },
+          "blend": {
+            "evaluated": 2,
+            "availableOf": 2,
+            "mae": 98.619,
+            "bias": -98.619
+          },
+          "regime": {
+            "evaluated": 2,
+            "availableOf": 2,
+            "mae": 89.486,
+            "bias": -89.486
+          }
+        },
+        "commonCount": 0,
+        "common": {
+          "oldP50": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          },
+          "oldP90": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          },
+          "mean7": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          },
+          "ewma3": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          },
+          "blend": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          },
+          "regime": {
+            "evaluated": 0,
+            "availableOf": 0,
+            "mae": null,
+            "bias": null
+          }
+        }
+      }
+    }
+  },
+  "synthetic": {
+    "configuration": "20 seeds per pattern; 84 days; 48h lag; hypothetical budgets = 6 units/day * horizon * {0.8,1.2}; overlapping results are not independent",
+    "results": {
+      "steady": {
+        "1": {
+          "commonCount": 1580,
+          "common": {
+            "oldP50": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.636,
+              "bias": -0.085,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.934,
+              "bias": 0.863,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.626,
+              "bias": -0.027,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.624,
+              "bias": -0.024,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.616,
+              "bias": -0.035,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 0.626,
+              "bias": -0.045,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1580,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 1340,
+          "common": {
+            "oldP50": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 1.739,
+              "bias": 0.003,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 2.241,
+              "bias": 1.718,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 1.928,
+              "bias": 0.023,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 1.884,
+              "bias": -0.005,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 1.739,
+              "bias": -0.065,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 1.716,
+              "bias": -0.109,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1340,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 500,
+          "common": {
+            "oldP50": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 4.856,
+              "bias": 0.783,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 5.022,
+              "bias": 1.78,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 6.72,
+              "bias": 1.543,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 6.329,
+              "bias": 1.577,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 5.34,
+              "bias": 1.29,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 5.223,
+              "bias": 0.846,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 500,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            }
+          }
+        }
+      },
+      "oneOff": {
+        "1": {
+          "commonCount": 1580,
+          "common": {
+            "oldP50": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.686,
+              "bias": -1.125,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1560,
+                "falseAlarm": 0,
+                "missedDepletion": 20
+              }
+            },
+            "oldP90": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.981,
+              "bias": -0.169,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1560,
+                "falseAlarm": 0,
+                "missedDepletion": 20
+              }
+            },
+            "mean7": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.668,
+              "bias": -0.027,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1420,
+                "falseAlarm": 140,
+                "missedDepletion": 20
+              }
+            },
+            "ewma3": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.59,
+              "bias": -0.024,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1312,
+                "falseAlarm": 248,
+                "missedDepletion": 20
+              }
+            },
+            "blend": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.496,
+              "bias": -0.035,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1194,
+                "falseAlarm": 366,
+                "missedDepletion": 20
+              }
+            },
+            "regime": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.972,
+              "bias": -0.623,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1580,
+                "trueReserve": 1408,
+                "falseAlarm": 152,
+                "missedDepletion": 20
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 1340,
+          "common": {
+            "oldP50": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 10.4,
+              "bias": -8.448,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1200,
+                "falseAlarm": 0,
+                "missedDepletion": 140
+              }
+            },
+            "oldP90": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 44.471,
+              "bias": 26.998,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 620,
+                "falseAlarm": 580,
+                "missedDepletion": 140
+              }
+            },
+            "mean7": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 19.009,
+              "bias": 0.023,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1060,
+                "falseAlarm": 140,
+                "missedDepletion": 140
+              }
+            },
+            "ewma3": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 18.701,
+              "bias": -0.005,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 952,
+                "falseAlarm": 248,
+                "missedDepletion": 140
+              }
+            },
+            "blend": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 18.276,
+              "bias": -0.065,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 834,
+                "falseAlarm": 366,
+                "missedDepletion": 140
+              }
+            },
+            "regime": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 13.736,
+              "bias": -4.742,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1340,
+                "trueReserve": 1060,
+                "falseAlarm": 140,
+                "missedDepletion": 140
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 500,
+          "common": {
+            "oldP50": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 70.201,
+              "bias": 9.115,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 81,
+                "falseAlarm": 239,
+                "missedDepletion": 180
+              }
+            },
+            "oldP90": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 76.729,
+              "bias": 16.668,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 41,
+                "falseAlarm": 279,
+                "missedDepletion": 180
+              }
+            },
+            "mean7": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 127.258,
+              "bias": 64.879,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 180,
+                "falseAlarm": 140,
+                "missedDepletion": 180
+              }
+            },
+            "ewma3": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 122.354,
+              "bias": 61.283,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 73,
+                "falseAlarm": 247,
+                "missedDepletion": 180
+              }
+            },
+            "blend": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 106.129,
+              "bias": 45.135,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 40,
+                "falseAlarm": 280,
+                "missedDepletion": 180
+              }
+            },
+            "regime": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 64.393,
+              "bias": 3.317,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 500,
+                "trueReserve": 180,
+                "falseAlarm": 140,
+                "missedDepletion": 180
+              }
+            }
+          }
+        }
+      },
+      "stepUp": {
+        "1": {
+          "commonCount": 1580,
+          "common": {
+            "oldP50": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.91,
+              "bias": -2.576,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1000,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 760
+              }
+            },
+            "oldP90": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.736,
+              "bias": -0.02,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1520,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 240
+              }
+            },
+            "mean7": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.417,
+              "bias": -0.768,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1552,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 208
+              }
+            },
+            "ewma3": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.421,
+              "bias": -0.871,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1570,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 190
+              }
+            },
+            "blend": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.72,
+              "bias": -1.367,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1499,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 261
+              }
+            },
+            "regime": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.946,
+              "bias": -1.489,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1379,
+                "trueReserve": 1400,
+                "falseAlarm": 0,
+                "missedDepletion": 381
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 1340,
+          "common": {
+            "oldP50": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 23.911,
+              "bias": -23.163,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 792,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 880
+              }
+            },
+            "oldP90": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 14.193,
+              "bias": -10.638,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1204,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 468
+              }
+            },
+            "mean7": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 11.526,
+              "bias": -9.339,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1312,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 360
+              }
+            },
+            "ewma3": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 11.603,
+              "bias": -10.204,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1330,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 342
+              }
+            },
+            "blend": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 14.794,
+              "bias": -14.295,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1259,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 413
+              }
+            },
+            "regime": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 15.297,
+              "bias": -13.985,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1203,
+                "trueReserve": 1008,
+                "falseAlarm": 0,
+                "missedDepletion": 469
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 500,
+          "common": {
+            "oldP50": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 234.601,
+              "bias": -234.601,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 86,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 914
+              }
+            },
+            "oldP90": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 223.938,
+              "bias": -223.938,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 126,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 874
+              }
+            },
+            "mean7": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 146.002,
+              "bias": -138.858,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 472,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 528
+              }
+            },
+            "ewma3": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 147.446,
+              "bias": -146.72,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 490,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 510
+              }
+            },
+            "blend": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 176.005,
+              "bias": -176.005,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 419,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 581
+              }
+            },
+            "regime": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 171.877,
+              "bias": -162.29,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 380,
+                "trueReserve": 0,
+                "falseAlarm": 0,
+                "missedDepletion": 620
+              }
+            }
+          }
+        }
+      },
+      "stepDown": {
+        "1": {
+          "commonCount": 1580,
+          "common": {
+            "oldP50": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.863,
+              "bias": 2.05,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 1000,
+                "falseAlarm": 760,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 5.338,
+              "bias": 5.235,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 480,
+                "falseAlarm": 1280,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.408,
+              "bias": 0.704,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 1488,
+                "falseAlarm": 272,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.48,
+              "bias": 0.815,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 1493,
+                "falseAlarm": 267,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 1.941,
+              "bias": 1.287,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 1340,
+                "falseAlarm": 420,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 2.012,
+              "bias": 1.298,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1400,
+                "trueReserve": 1195,
+                "falseAlarm": 565,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 1340,
+          "common": {
+            "oldP50": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 23.946,
+              "bias": 22.544,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 728,
+                "falseAlarm": 880,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 36.329,
+              "bias": 35.799,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 314,
+                "falseAlarm": 1294,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 10.861,
+              "bias": 9.393,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 1248,
+                "falseAlarm": 360,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 11.648,
+              "bias": 10.192,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 1253,
+                "falseAlarm": 355,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 15.541,
+              "bias": 14.142,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 1100,
+                "falseAlarm": 508,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 14.791,
+              "bias": 13.2,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1072,
+                "trueReserve": 1058,
+                "falseAlarm": 550,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 500,
+          "common": {
+            "oldP50": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 236.363,
+              "bias": 236.363,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 0,
+                "falseAlarm": 986,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 246.287,
+              "bias": 246.287,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 0,
+                "falseAlarm": 986,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 142.797,
+              "bias": 142.458,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 408,
+                "falseAlarm": 578,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 150.4,
+              "bias": 150.4,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 413,
+                "falseAlarm": 573,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 179.015,
+              "bias": 179.015,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 260,
+                "falseAlarm": 726,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 166,
+              "bias": 165.183,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 14,
+                "trueReserve": 276,
+                "falseAlarm": 710,
+                "missedDepletion": 0
+              }
+            }
+          }
+        }
+      },
+      "weekly": {
+        "1": {
+          "commonCount": 1580,
+          "common": {
+            "oldP50": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 4.701,
+              "bias": -4.33,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 0,
+                "trueReserve": 2200,
+                "falseAlarm": 0,
+                "missedDepletion": 960
+              }
+            },
+            "oldP90": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 11.193,
+              "bias": 9.976,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 880,
+                "trueReserve": 40,
+                "falseAlarm": 2160,
+                "missedDepletion": 80
+              }
+            },
+            "mean7": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 6.2,
+              "bias": -0.467,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 675,
+                "trueReserve": 551,
+                "falseAlarm": 1649,
+                "missedDepletion": 285
+              }
+            },
+            "ewma3": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 6.882,
+              "bias": -0.454,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 440,
+                "trueReserve": 386,
+                "falseAlarm": 1814,
+                "missedDepletion": 520
+              }
+            },
+            "blend": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 6.595,
+              "bias": -0.525,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 445,
+                "trueReserve": 415,
+                "falseAlarm": 1785,
+                "missedDepletion": 515
+              }
+            },
+            "regime": {
+              "evaluated": 1580,
+              "availableOf": 1580,
+              "mae": 3.598,
+              "bias": -0.554,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 804,
+                "trueReserve": 1321,
+                "falseAlarm": 879,
+                "missedDepletion": 156
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 1340,
+          "common": {
+            "oldP50": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 2.892,
+              "bias": -0.101,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1762,
+                "trueReserve": 269,
+                "falseAlarm": 343,
+                "missedDepletion": 306
+              }
+            },
+            "oldP90": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 3.702,
+              "bias": 2.674,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 2011,
+                "trueReserve": 42,
+                "falseAlarm": 570,
+                "missedDepletion": 57
+              }
+            },
+            "mean7": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 3.266,
+              "bias": 0.038,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1740,
+                "trueReserve": 284,
+                "falseAlarm": 328,
+                "missedDepletion": 328
+              }
+            },
+            "ewma3": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 9.518,
+              "bias": -0.628,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1674,
+                "trueReserve": 317,
+                "falseAlarm": 295,
+                "missedDepletion": 394
+              }
+            },
+            "blend": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 6.636,
+              "bias": -0.916,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1670,
+                "trueReserve": 327,
+                "falseAlarm": 285,
+                "missedDepletion": 398
+              }
+            },
+            "regime": {
+              "evaluated": 1340,
+              "availableOf": 1340,
+              "mae": 3.503,
+              "bias": -1.261,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1660,
+                "trueReserve": 330,
+                "falseAlarm": 282,
+                "missedDepletion": 408
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 500,
+          "common": {
+            "oldP50": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 6.949,
+              "bias": 0.552,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 634,
+                "trueReserve": 94,
+                "falseAlarm": 158,
+                "missedDepletion": 114
+              }
+            },
+            "oldP90": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 7.124,
+              "bias": 1.793,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 650,
+                "trueReserve": 75,
+                "falseAlarm": 177,
+                "missedDepletion": 98
+              }
+            },
+            "mean7": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 10.93,
+              "bias": 1.712,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 636,
+                "trueReserve": 103,
+                "falseAlarm": 149,
+                "missedDepletion": 112
+              }
+            },
+            "ewma3": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 36.695,
+              "bias": -3.217,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 609,
+                "trueReserve": 132,
+                "falseAlarm": 120,
+                "missedDepletion": 139
+              }
+            },
+            "blend": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 24.017,
+              "bias": -2.084,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 609,
+                "trueReserve": 130,
+                "falseAlarm": 122,
+                "missedDepletion": 139
+              }
+            },
+            "regime": {
+              "evaluated": 500,
+              "availableOf": 500,
+              "mae": 7.766,
+              "bias": 0.147,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 641,
+                "trueReserve": 101,
+                "falseAlarm": 151,
+                "missedDepletion": 107
+              }
+            }
+          }
+        }
+      },
+      "missing": {
+        "1": {
+          "commonCount": 1380,
+          "common": {
+            "oldP50": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.638,
+              "bias": -0.054,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.932,
+              "bias": 0.859,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.636,
+              "bias": -0.017,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.634,
+              "bias": -0.016,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.624,
+              "bias": -0.02,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 1380,
+              "availableOf": 1380,
+              "mae": 0.631,
+              "bias": -0.022,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 1380,
+                "trueReserve": 1380,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "7": {
+          "commonCount": 280,
+          "common": {
+            "oldP50": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.679,
+              "bias": 0.053,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "oldP90": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.997,
+              "bias": 1.377,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "mean7": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.831,
+              "bias": 0.065,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "ewma3": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.833,
+              "bias": -0.03,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "blend": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.693,
+              "bias": -0.026,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            },
+            "regime": {
+              "evaluated": 280,
+              "availableOf": 280,
+              "mae": 1.674,
+              "bias": -0.011,
+              "hypotheticalBudgetClassification": {
+                "trueDepletion": 280,
+                "trueReserve": 280,
+                "falseAlarm": 0,
+                "missedDepletion": 0
+              }
+            }
+          }
+        },
+        "28": {
+          "commonCount": 0,
+          "common": {
+            "oldP50": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            },
+            "oldP90": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            },
+            "mean7": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            },
+            "ewma3": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            },
+            "blend": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            },
+            "regime": {
+              "evaluated": 0,
+              "availableOf": 0,
+              "mae": null,
+              "bias": null
+            }
+          }
+        }
+      }
+    }
+  },
+  "invariants": "Passed: sleep intervals, refill/plan/censor boundaries, cutoff isolation, missing truth and delayed model feedback"
+}

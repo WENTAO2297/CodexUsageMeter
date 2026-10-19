@@ -83,8 +83,16 @@ for attempt in {1..5}; do
   /bin/sleep 2
 done
 (( loaded )) || exit 1
-/bin/sleep 3
 /bin/launchctl print "$DOMAIN/$LABEL" >/dev/null
+ready=0
+# First-launch signature/LaunchServices checks can exceed three seconds. Wait
+# for these exact owned processes instead of rejecting a healthy slow start.
+for attempt in {1..30}; do
+  if [[ -n "$(exact_pids "$APP_EXEC")" && -n "$(exact_pids "$WIDGET_EXEC")" ]]; then ready=1; break; fi
+  /bin/sleep 0.5
+done
+(( ready )) || { print -u2 -- 'App/widget did not become ready within 15 seconds.'; exit 1; }
+/bin/sleep 1
 [[ -n "$(exact_pids "$APP_EXEC")" && -n "$(exact_pids "$WIDGET_EXEC")" ]]
 # Keep one complete previous installation, including the legacy layout.
 if [[ -d "$INSTALL_DIR/Rollback" ]]; then /bin/mv "$INSTALL_DIR/Rollback" "$STAGE/older-rollback"; fi

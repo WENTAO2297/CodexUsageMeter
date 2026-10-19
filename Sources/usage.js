@@ -7,16 +7,29 @@ function syncUsageAccount() {
   var currentId = readUsageAccountId();
   if (currentId === usageAccountId) return;
   usageAccountId = currentId;
+  usagePlanType = null;
+  usageLastGoodAt = 0;
+  if(typeof resetTokenHistory==='function')resetTokenHistory();
+  restoreForecastHistory(currentId);
   quotaWindows = [{ label: 'Quota', durationMins: null, remaining: null, resetAt: null }];
   availableCredits = null;
   resetCreditExpirations = [];
+  if(typeof resetTokenMeter==='function')resetTokenMeter();
+  resetCreditCards=[];
   usageSyncState = 'loading';
   usageText = '!';
   var cached = readUsageCache(currentId);
   if (cached) {
+    usageLastGoodAt = cached.savedAt/1000;
+    usagePlanType = cached.planType;
+    // Backward-compatible last-known plan, not a claim of a fresh plan read.
+    var tokens=typeof tokenHistorySnapshot==='undefined'?null:tokenHistorySnapshot;
+    var anchor=tokens&&tokens.accountId===currentId&&tokens.anchors[tokens.anchors.length-1];
+    if(!usagePlanType&&anchor&&cached.windows.some(function(w){return w.durationMins===10080&&Math.abs(w.resetAt-anchor.resetAt)<=600;}))usagePlanType=anchor.plan;
     quotaWindows = cached.windows;
     availableCredits = cached.credits;
     resetCreditExpirations = cached.expirations;
+    if(typeof observeResetCards==='function')resetCreditCards=observeResetCards(cached.resetCards,cached.expirations,[],cached.savedAt/1000,cached.credits);
     usageSyncState = 'cached';
     var gauge = gaugeQuotaWindow(quotaWindows);
     usageText = gauge.label + ' ' + gauge.remaining + '% · stale';
@@ -34,7 +47,16 @@ function applyUsagePayload(result) {
   quotaWindows = normalized.windows;
   availableCredits = normalized.credits;
   resetCreditExpirations = normalized.expirations;
+  if(typeof observeResetCards==='function'){
+    resetCreditCards=observeResetCards(normalized.resetCards,normalized.expirations,resetCreditCards,Date.now()/1000,normalized.credits);
+    normalized.resetCards=resetCreditCards;
+  }
   usageSyncState = 'ready';
+  var payload=result.result,limit=payload.rateLimitsByLimitId&&payload.rateLimitsByLimitId.codex||payload.rateLimits;
+  usagePlanType=limit&&typeof limit.planType==='string'?limit.planType:null;
+  recordQuotaForecast(quotaWindows);
+  usageLastGoodAt = typeof forecastLastSuccessAt==='number'&&forecastLastSuccessAt>0?forecastLastSuccessAt:Date.now()/1000;
+  if(typeof requestTokenHistoryRead==='function')requestTokenHistoryRead();
   var gauge = gaugeQuotaWindow(quotaWindows);
   animateStatusIconQuota(gauge.remaining / 100);
   redrawUsageCardIfNeeded(false);
@@ -150,7 +172,8 @@ function refresh() {
 function refreshAllSources() {
   requestUsageRefresh();
   requestRunningTasksRead(true);
-  requestPinnedThreadsRead(true);
   redrawUsageCardIfNeeded(false);
   requestMaoMaoYunStatus(true);
+  requestMaoMaoYunTraffic(true);
+  if(typeof requestTokenMeterRead==='function')requestTokenMeterRead(true);
 }

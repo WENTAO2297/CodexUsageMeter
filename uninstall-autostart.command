@@ -25,6 +25,7 @@ stop_meter "$APP_PATH/Contents/MacOS/CodexUsageMeter"
 /bin/sleep 1
 stop_meter "$APP_PATH/Contents/Helpers/CodexUsageMeterMenuBar.app/Contents/MacOS/applet"
 stop_meter "$INSTALL_DIR/AppBundle/CodexUsageMeterMenuBar.app/Contents/MacOS/applet"
+/usr/bin/defaults delete com.wentao.codex-usage-meter.widget menuBarDisplayMode >/dev/null 2>&1 || true
 rm -f "$PLIST_PATH"
 rm -rf "$APP_PATH" "$INSTALL_DIR"
 echo "已卸载 Codex Usage Meter App、自启动及本地数据（包括回滚副本）。项目源码未删除。"

@@ -4,9 +4,28 @@ function cardColor(red, green, blue, alpha) {
 }
 
 function cardFont(size, bold) {
-  var key = size + ':' + (bold ? 'bold' : 'regular');
+  var weight = bold === 'medium' ? 'medium' : bold ? 'bold' : 'regular';
+  var key = size + ':' + weight;
   if (!renderState.fonts[key]) {
-    renderState.fonts[key] = bold ? $.NSFont.boldSystemFontOfSize(size) : $.NSFont.systemFontOfSize(size);
+    renderState.fonts[key] = weight === 'medium' ? $.NSFont.systemFontOfSizeWeight(size, $.NSFontWeightMedium) :
+      bold ? $.NSFont.boldSystemFontOfSize(size) : $.NSFont.systemFontOfSize(size);
+  }
+  return renderState.fonts[key];
+}
+
+function statusQuotaFont(size) {
+  var key = 'status-quota:' + size;
+  if (!renderState.fonts[key]) {
+    var font;
+    try {
+      font = $.NSFont.monospacedDigitSystemFontOfSizeWeight(size, $.NSFontWeightSemibold);
+      var descriptor = font.fontDescriptor.fontDescriptorWithDesign($.NSFontDescriptorSystemDesignRounded);
+      if (descriptor) font = $.NSFont.fontWithDescriptorSize(descriptor, size) || font;
+    } catch (ignored) {
+      // Keep tabular digits when the rounded design is unavailable.
+      if (!font) font = $.NSFont.boldSystemFontOfSize(size);
+    }
+    renderState.fonts[key] = font;
   }
   return renderState.fonts[key];
 }
@@ -14,6 +33,8 @@ function cardFont(size, bold) {
 function cardColors() {
   if (!renderState.cardColors) {
     renderState.cardColors = {
+      // Wi-Fi reference switch, sampled in Display P3 and converted to sRGB.
+      blue: $.NSColor.colorWithSRGBRedGreenBlueAlpha(15/255, 126/255, 1, 1),
       body: cardColor(0.91, 0.91, 0.93, 1.0),
       muted: cardColor(0.66, 0.67, 0.70, 1.0),
       track: cardColor(0.38, 0.39, 0.43, 0.58),
@@ -59,13 +80,17 @@ function cardAttributes(size, color, bold) {
   // `$({ ... })` creates a real NSDictionary. Passing JavaScript arrays to
   // dictionaryWithObjectsForKeys can produce a nested NSDictionary on some
   // macOS versions, which then fails when NSString asks for `pointSize`.
+  var paragraph = $.NSMutableParagraphStyle.alloc.init;
+  paragraph.lineBreakMode = $.NSLineBreakByTruncatingTail;
   return $({
     NSFont: cardFont(size, bold),
-    NSColor: color
+    NSColor: color,
+    NSParagraphStyle: paragraph
   });
 }
 
 function drawCardText(text, x, y, width, size, color, bold) {
+  if (typeof uiText === 'function') text = uiText(text);
   $(String(text)).drawInRectWithAttributes(
     $.NSMakeRect(x, y, width, size + 4),
     cardAttributes(size, color, bold)
@@ -73,30 +98,18 @@ function drawCardText(text, x, y, width, size, color, bold) {
 }
 
 function drawCardTextRight(text, rightEdge, y, size, color, bold) {
+  if (typeof uiText === 'function') text = uiText(text);
   var value = $(String(text));
   var attributes = cardAttributes(size, color, bold);
   var measured = value.sizeWithAttributes(attributes);
-  var width = Math.max(0, measured.width);
+  var width = Math.max(0, Math.min(rightEdge-16,measured.width));
   value.drawInRectWithAttributes(
     $.NSMakeRect(Math.max(16, rightEdge - width), y, width, size + 4),
     attributes
   );
 }
 
-function drawCardTextWithTrailingText(left, right, x, y, width, size, color) {
-  var attributes = cardAttributes(size, color, false);
-  var rightValue = $(String(right));
-  var rightWidth = rightValue.sizeWithAttributes(attributes).width;
-  // Reserve a small fixed gutter so the two metadata values read as one row
-  // without ever touching, even when a reset countdown is long.
-  drawCardText(left, x, y, Math.max(0, width - rightWidth - 12), size, color, false);
-  rightValue.drawInRectWithAttributes(
-    $.NSMakeRect(x + width - rightWidth, y, rightWidth, size + 4),
-    attributes
-  );
-}
-
-function drawRoundedBar(x, y, width, height, fraction) {
+function drawRoundedBar(x, y, width, height, fraction, fillColor) {
   var colors = cardColors();
   var track = $.NSBezierPath.bezierPathWithRoundedRectXRadiusYRadius(
     $.NSMakeRect(x, y, width, height), height / 2, height / 2
@@ -113,7 +126,7 @@ function drawRoundedBar(x, y, width, height, fraction) {
     $.NSMakeRect(x, y, fillWidth, height), height / 2, height / 2
   );
   var remainingPercent = fraction * 100;
-  var fillColor = quotaCardColor(quotaTone(remainingPercent), false);
+  fillColor = fillColor || quotaCardColor(quotaTone(remainingPercent), false);
   sendVoid(fillColor, 'setFill');
   sendVoid(fill, 'fill');
 }
