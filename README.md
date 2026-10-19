@@ -52,6 +52,14 @@ A lightweight, native macOS menu bar app for Codex usage limits and VPN traffic.
 - 读取脚本还使用 `/usr/bin/jq`、`/usr/bin/sqlite3` 等系统工具。原生二进制包含 arm64 / x86_64，但不代表全部 macOS 版本或 Intel 设备均已验证。
 - Codex 额度使用本机已有登录，不要求填写 API Key。
 
+## 直接下载安装
+
+前往 [GitHub Releases](https://github.com/WENTAO2297/CodexUsageMeter/releases/latest)，下载 `CodexUsageMeter-1.0.0-macos-universal.dmg`。打开后将 App 拖入“应用程序”，弹出磁盘映像，再双击启动；也可下载 ZIP，解压后移动 App。运行不需要 Node.js 或 Xcode，仍需本机已安装并登录 Codex，以及上述系统工具。
+
+下载包包含 Apple Silicon / Intel 两种架构，但尚未完成跨设备验证。DMG 内附安装说明；登录启动可按 [Apple 官方说明](https://support.apple.com/zh-cn/guide/mac-help/mh15189/mac)，在 macOS“通用 → 登录项与扩展”中手动添加 App，下载包不会自动配置。
+
+**当前发布包仅使用 ad-hoc 签名，尚未公证。** 首次打开若被系统拦截，请先核对来源与 Release 中的 SHA-256；确认信任后，按 [Apple 官方说明](https://support.apple.com/zh-cn/102445)，在“系统设置 → 隐私与安全性”中针对该 App 选择“仍要打开”，不要关闭系统安全保护。启动与唤醒仍可能自动连接 `MaoMaoYun` VPN，行为见上文。
+
 ## 从源码安装
 
 ```sh
@@ -164,5 +172,5 @@ node Tests/app-bundle.cjs "/path/to/Codex Usage Meter.app"
 - 今日统计可能延迟；长时间不写本地执行记录的任务也可能被显示为空闲。
 - 离线回归和合成历史回放不能证明真实长期预测准确率，也不代表所有系统事件排列或其他 Mac 均已验证。
 - 当前 App 为本地 ad-hoc 签名，尚未公证，不是已完成跨设备分发验证的正式发行包。
-- 仓库仅发布检查后的源码、测试和说明，不包含私人开发历史、账号缓存、备份或旧版二进制。
+- 源码仓库仅包含检查后的源码、测试和说明；预编译 App 通过 GitHub Releases 单独提供，不包含私人开发历史、账号缓存、备份或旧版个人包。
 - 当前仓库尚未指定开源许可证。
