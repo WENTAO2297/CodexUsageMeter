@@ -48,7 +48,7 @@ A native macOS menu bar app for Codex usage limits, VPN traffic, and activity.
 
 **发布包仅使用 ad-hoc 签名，尚未完成 Developer ID 签名与公证。** 首次打开可能被 macOS 拦截。请先核对来源与 Release 中的 SHA-256；确认信任后，按 [Apple 官方说明](https://support.apple.com/zh-cn/102445)在“隐私与安全性”中针对该 App 选择“仍要打开”，不要关闭系统安全保护。
 
-> 安装包与 `main` 源码独立发布。本次工作日／周末预测更新已进入源码，尚未重新打包到现有 v1.0.0 Release；要使用这些更新，请从源码安装。
+> [v1.1.0 安装包](https://github.com/WENTAO2297/CodexUsageMeter/releases/tag/v1.1.0)已包含上海时区与工作日／周末预测更新（额度第5版、VPN第7版）。安装包与 `main` 源码独立发布，后续源码改动请以对应 Release 说明为准。
 
 ### 从源码安装最新版本
 
