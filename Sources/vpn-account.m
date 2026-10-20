@@ -10,6 +10,7 @@
 static NSString *const AccountOrigin = @"https://app.maomao234.com";
 static NSString *const AccountService = @"com.wentao.codex-usage-meter.maomaoyun";
 static NSUInteger const ResponseLimit = 262144;
+static NSInteger const AccountHistoryDays = 180;
 
 static NSDictionary *AccountFailure(NSString *state) {
     return @{@"version": @3, @"state": state};
@@ -182,6 +183,7 @@ static NSDictionary *NormalizeAccountCalendarDays(NSDictionary *reply, long long
 static NSDictionary *NormalizeAccountHistory(NSDictionary *reply, NSString *revision, long long now) {
     NSDictionary *binding = @{@"accountKey": AccountDigest([AccountOrigin stringByAppendingFormat:@"/%@", revision]),
         @"credentialRevision": revision, @"identityKind": @"session", @"fetchedAt": @(now),
+        @"retentionDays": @(AccountHistoryDays),
         @"completeness": @"unverified", @"billingBasis": @"website-u+d", @"bucketBasis": @"utc-24h"};
     NSMutableDictionary *result = [binding mutableCopy];
     [result addEntriesFromDictionary:NormalizeAccountCalendarDays(reply, now, NSTimeZone.localTimeZone)];
@@ -212,7 +214,7 @@ static NSDictionary *NormalizeAccountHistory(NSDictionary *reply, NSString *revi
     }
     NSArray *dates = [[totals allKeys] sortedArrayUsingSelector:@selector(compare:)];
     NSUInteger originalCount = dates.count;
-    long long earliest = ((now / 1000 / 86400) - 34) * 86400;
+    long long earliest = ((now / 1000 / 86400) - (AccountHistoryDays - 1)) * 86400;
     dates = [dates filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(NSNumber *at, NSDictionary *bindings) {
         (void)bindings; return at.longLongValue >= earliest;
     }]];

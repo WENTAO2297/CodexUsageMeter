@@ -44,7 +44,7 @@ for(const [consumption,headline] of [[235.44,'At reported pace: lasts to reset']
 }
 assert.equal(results.at(-1).detail,'At reset: ~0G left · estimate only','exact exhaustion at reset is not early exhaustion');
 // Report days EARLIER than reset, not days of remaining use from now.
-const timingForecast=(days,crossing)=>({basis:'adaptive',verdict:'risk',typicalConsumption:400*unit,
+const timingForecast=(days,crossing)=>({basis:'adaptive',verdict:'risk',precision:'day',evidence:'supported',typicalConsumption:400*unit,
  highConsumption:500*unit,crossingDays:crossing,horizonDays:days,text:'At reset: ~0G left · estimate only'});
 for(const [days,crossing,lead,display] of [[28,18,10,'10'],[28,17.4,10.6,'11'],[28,27,1,'1'],[28,27.5,.5,'<1']]){
  const snapshotAtReset={...snapshot,resetDays:days},forecast=timingForecast(days,crossing),before=JSON.stringify(forecast);
@@ -58,14 +58,36 @@ for(const [days,crossing,lead,display] of [[28,18,10,'10'],[28,17.4,10.6,'11'],[
  const badge=ctx.dashboardMetricBadge({kind:'traffic',hasValue:true,stale:false,summary});
  assert.equal(badge.label,short);assert.equal(badge.tone,'warning','the existing typical early crossing may be emphasized in the shared title style');
  assert.equal(summary.status,'unknown','a warning badge is not a confidence upgrade');
- ctx.uiLanguage='zh-CN';assert.equal(ctx.uiText(short),'预计提前 '+display+' 天用尽');
+ ctx.uiLanguage='zh-CN';assert.equal(ctx.uiText(short),'提前约 '+display+' 天用尽');
  assert.equal(ctx.uiText('Traffic · '+summary.headline),'流量 · 预计重置前 '+display+' 天用尽','composed accessibility text is localized');
  ctx.uiLanguage='en';assert.equal(ctx.uiText(short),short);
  assert.equal(JSON.stringify(forecast),before,'presentation does not change the model');results.push(summary);
 }
 const exactReset=ctx.trafficForecastSummary(snapshot,p,{...timingForecast(30,30),typicalConsumption:snapshot.remainingBytes});
-assert.equal(ctx.compactForecastSummary(exactReset).outcome,'May use it all');
+assert.equal(ctx.compactForecastSummary(exactReset).outcome,'May run out','without a supported early ETA, depletion stays qualitative');
 assert.equal(ctx.compactForecastSummary(exactReset).depletionLeadDays,null,'exact reset exhaustion is not zero days early');
+// Coarse warnings retain useful timing without promoting the model's
+// precision/evidence or claiming every scenario depletes before reset.
+for(const [crossing,range,label] of [[25,[14,31],'May run out ~5d early'],
+ [29.5,[28,31],'May run out ~<1d early'],[25,[23,27],'May run out 3–7d early'],
+ [25,[24,26],'May run out ~5d early'],[25,null,'May run out ~5d early']]){
+ const f={...timingForecast(30,crossing),precision:'qualitative',evidence:'limited',crossingRange:range},before=JSON.stringify(f);
+ const summary=ctx.trafficForecastSummary(snapshot,p,f);
+ assert.equal(summary.headline,label);assert.equal(summary.adaptive.possibleDepletionLabel,label);
+ assert.equal(summary.adaptive.depletionLeadDays,null,'coarse timing does not pass the stricter date gate');
+ const badge=ctx.trafficPredictionBadge({hasValue:true,stale:false,fraction:.5,resetDays:30,summary},f);
+ assert.equal(badge.label,label);assert.equal(badge.tone,'warning');assert.equal(ctx.meterStatusSymbol(label),'exclamationmark.triangle.fill');
+ assert.equal(ctx.dashboardForecast(summary).outcome,label,'accessibility and narrow fallback share the numeric warning');
+ ctx.uiLanguage='zh-CN';assert.match(ctx.uiText(label),/^提前约 /);
+ assert(!/可能|预计/.test(ctx.uiText(label)),'numeric warning keeps only the concise approximate lead');
+ ctx.uiLanguage='en';assert.equal(ctx.uiText(label),label,'English and evidence semantics are unchanged');
+ assert.equal(JSON.stringify(f),before,'display does not change the forecast or precision');
+ results.push(summary);
+}
+for(const f of [{...timingForecast(30,31),precision:'qualitative'},
+ {...timingForecast(30,25),verdict:'risk',typicalConsumption:100*unit},
+ {...timingForecast(28,25),precision:'qualitative'}])
+ assert.equal(ctx.trafficPossibleDepletionText(snapshot,f),null,'non-crossing, held warning or mismatched horizon must not invent days');
 for(const crossing of [undefined,null,'18',-1,30,31,NaN,Infinity]){
  const summary=ctx.trafficForecastSummary(snapshot,p,timingForecast(30,crossing));
  assert.equal(ctx.compactForecastSummary(summary).depletionLeadDays,null,'invalid/non-crossing paths have no invented day count');
@@ -147,7 +169,7 @@ for(const [consumption,outcome] of [[235.44,'Projected surplus'],[400,'Expected 
   'Expected empty at reset':'Projected depletion at reset'
  }[outcome],'traffic conclusion follows actual forecast, never a fixed depletion label');
  const badge=ctx.dashboardMetricBadge({kind:'traffic',hasValue:true,stale:false,summary});
- assert.equal(badge.tone,outcome==='Projected surplus'?'normal':'muted','only a fresh displayed reserve uses the green normal state');
+ assert.equal(badge.tone,outcome==='Projected surplus'?'normal':'warning','visible depletion/tightness remains a warning without changing model confidence');
  assert.equal(summary.status,'unknown','green is a display convention, not a confidence upgrade');
  assert.equal(ctx.dashboardMetricBadge({kind:'traffic',hasValue:true,stale:true,summary}).tone,'muted','stale reserves never stay green');
  assert.equal(ctx.dashboardMetricBadge({kind:'traffic',hasValue:false,stale:false,summary}).tone,'muted','missing data never shows green');
@@ -179,7 +201,7 @@ assert.equal(sessionRow.value,'0%');
 assert.equal(sessionRow.outcome,'Expected to run out soon','short-term Session scenarios do not claim a full-cycle early depletion');
 assert.equal(sessionRow.label,'In 30m','short-term estimates must not claim to cover the whole reset cycle');
 assert.equal(ctx.dashboardMetricBadge({window:session,hasValue:true,stale:false,summary:sessionSummary}).tone,'warning');
-assert.equal(ctx.dashboardMetricBadge({window:{...w,remaining:100},hasValue:true,stale:false}).tone,'normal');
+assert.equal(ctx.dashboardMetricBadge({window:{...w,remaining:100},hasValue:true,stale:false}).tone,'muted','unmodelled cycle progress is not a green forecast');
 for(const [key,chinese] of [['Expected to run out early','预计在重置前用尽'],['Expected to run out soon','预计近期用尽']]){
  ctx.uiLanguage='zh-CN';assert.equal(ctx.uiText(key),chinese);
  ctx.uiLanguage='en';assert.equal(ctx.uiText(key),key);

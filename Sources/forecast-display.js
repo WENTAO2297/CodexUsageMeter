@@ -1,5 +1,42 @@
 // Presentation only: summarize existing forecast results, never relax their
 // evidence gates or extend a short Session estimate to a whole reset cycle.
+function quotaPredictionBadge(window,forecast,now,stale) {
+  var pace=quotaPaceModel(window,now,stale),f=forecast||{};
+  if(stale||['No data','Reset unknown','Resetting','Exhausted','Quota low'].indexOf(pace.label)>=0)return pace;
+  if(f.basis==='adaptive'&&['supported','adjusted'].indexOf(f.evidence)>=0){
+    return {label:f.verdict==='risk'?'May run out':f.verdict==='tight'?'May be tight':'Reserve at reset',
+      tone:f.verdict==='risk'||f.verdict==='tight'?'warning':'normal',source:'forecast'};
+  }
+  if(f.basis==='recent'&&meterNumber(f.projectedRemaining)&&f.projectedRemaining<0)
+    return {label:'Near-term depletion',tone:'warning',source:'short-term'};
+  return {label:pace.label==='Above pace'?'Cycle use ahead':'Cycle on pace',
+    tone:pace.label==='Above pace'?'warning':'muted',source:'cycle'};
+}
+
+function trafficPredictionBadge(data,forecast) {
+  if(!data.hasValue)return {label:'No data',tone:'muted'};
+  if(data.stale)return {label:'Last known',tone:'muted'};
+  if(data.fraction===0)return {label:'Exhausted',tone:'critical'};
+  var f=forecast||{};
+  if(!(data.resetDays>0))return {label:'Reset unknown',tone:'muted'};
+  if(f.basis==='adaptive'){
+    // Use the validated summary ETA, never reconstruct the balance from a
+    // pointRemaining value that has already been clipped at zero.
+    var summary=data.summary&&data.summary.adaptive;
+    if(f.precision==='day'&&summary&&summary.depletionLeadDays!==null&&summary.depletionLeadDays!==undefined)
+      return {label:'Est. empty '+(summary.depletionLeadDays<1?'<1':Math.round(summary.depletionLeadDays))+'d early',tone:'warning'};
+    if(f.verdict==='risk')return {label:summary&&summary.possibleDepletionLabel||'Possible depletion',tone:'warning'};
+    if(f.algorithmVersion>=5&&f.resetSensitive)return {label:'May be tight',tone:'warning'};
+    if(f.verdict==='tight')return {label:'May be tight',tone:'warning'};
+    if(f.recentChange==='up')return {label:'Recent use rising',tone:'warning'};
+    if(['supported','adjusted'].indexOf(f.evidence)>=0)return {label:'Reserve at reset',tone:'normal'};
+    return {label:'Forecast observing',tone:'muted'};
+  }
+  if(f.basis==='reportedHistory'&&data.summary&&/may run out|used up/.test(data.summary.headline))
+    return {label:'May be tight',tone:'warning'};
+  return {label:'Forecast observing',tone:'muted'};
+}
+
 function quotaForecastSummary(window, forecast, now) {
   var f = forecast || {}, detail = f.text || f.reason || 'Waiting for quota';
   var summary = {headline:'Not enough data to predict', detail:f.budget || f.reason || detail, status:'unknown'};
@@ -37,9 +74,10 @@ function quotaForecastSummary(window, forecast, now) {
 
 function trafficDepletionLeadDays(snapshot, forecast) {
   var horizon=snapshot.resetDays,crossing=forecast.crossingDays;
+  if(forecast.algorithmVersion>=5&&(!forecast.timingAvailable||!forecast.resetStable||!forecast.resetLeadRange))return null;
   // Use the model's actual crossing time, not balance / average daily use.
   // Unknown horizons and censored/non-crossing paths cannot supply an ETA.
-  if(forecast.basis!=='adaptive'||typeof horizon!=='number'||!(horizon>0)||!isFinite(horizon)||forecast.horizonDays!==horizon||
+  if(forecast.basis!=='adaptive'||forecast.precision!=='day'||typeof horizon!=='number'||!(horizon>0)||!isFinite(horizon)||forecast.horizonDays!==horizon||
       typeof snapshot.remainingBytes!=='number'||!isFinite(snapshot.remainingBytes)||snapshot.remainingBytes<=0||
       typeof crossing!=='number'||!isFinite(crossing)||crossing<0||crossing>=horizon-1e-6||
       typeof forecast.typicalConsumption!=='number'||!isFinite(forecast.typicalConsumption)||
@@ -49,6 +87,38 @@ function trafficDepletionLeadDays(snapshot, forecast) {
 
 function trafficEarlyDepletionText(days) {
   return 'Estimated empty '+(days<1?'<1':Math.round(days))+'d before reset';
+}
+
+// Preserve approximate lead times even when strict day precision is unavailable.
+// A conditional point path is not a claim that every scenario will deplete.
+function trafficPossibleDepletionText(snapshot,forecast) {
+  return forecastDepletionText(snapshot.remainingBytes,snapshot.resetDays,forecast);
+}
+
+// VPN warnings use existing path times, never a balance / average-rate ETA.
+function forecastDepletionText(remaining,h,forecast) {
+  var f=forecast||{},c=f.crossingDays,r=f.crossingRange;
+  if(f.basis!=='adaptive'||f.verdict!=='risk'||typeof h!=='number'||!isFinite(h)||h<=0||f.horizonDays!==h||
+      typeof remaining!=='number'||!isFinite(remaining)||remaining<=0||
+      typeof f.typicalConsumption!=='number'||!isFinite(f.typicalConsumption)||f.typicalConsumption<remaining||
+      typeof c!=='number'||!isFinite(c)||c<0||c>=h-1e-6)return null;
+  if(f.algorithmVersion>=5){
+    // This is the user-requested approximate point ETA, not the strict day
+    // gate above. A non-crossing upper scenario must not erase a valid point.
+    if(!f.timingAvailable)return null;
+    var leadRange=f.resetLeadRange;
+    if(leadRange&&leadRange[1]-leadRange[0]>2+1e-6&&Math.floor(leadRange[0])>=1)
+      return 'May run out '+Math.floor(leadRange[0])+'–'+Math.ceil(leadRange[1])+'d early';
+  }
+  // Only show a range if both endpoints actually cross before reset. The
+  // horizon+1 sentinel means some scenarios do not deplete, not "-1d early".
+  if(Array.isArray(r)&&r.length===2&&typeof r[0]==='number'&&typeof r[1]==='number'&&
+      isFinite(r[0])&&isFinite(r[1])&&r[0]>=0&&r[0]<=c&&c<=r[1]&&r[1]<h-1e-6&&r[1]-r[0]>2){
+    var lower=Math.floor(h-r[1]),upper=Math.ceil(h-r[0]);
+    if(lower>=1)return 'May run out '+lower+'–'+upper+'d early';
+  }
+  var lead=h-c;
+  return 'May run out ~'+(lead<1?'<1':Math.round(lead))+'d early';
 }
 
 function trafficForecastSummary(snapshot, presentation, forecast) {
@@ -61,10 +131,11 @@ function trafficForecastSummary(snapshot, presentation, forecast) {
     var match=/^At reset: ~([<\d.]+[BKMGT]) left/.exec(f.text||'');
     var empty=f.typicalConsumption>=snapshot.remainingBytes;
     var leadDays=trafficDepletionLeadDays(snapshot,f);
-    var outcome=empty?(leadDays!==null?'May run out':'May use it all'):
+    var possible=trafficPossibleDepletionText(snapshot,f);
+    var outcome=f.algorithmVersion>=5&&f.resetSensitive&&!empty?'May be tight':empty?'May run out':
       f.verdict==='tight'||f.verdict==='risk'?'May be tight':'Projected surplus';
-    return {headline:leadDays!==null?trafficEarlyDepletionText(leadDays):empty?'At reported pace: may run out':'At reported pace: lasts to reset',detail:f.text,status:'unknown',
-      adaptive:match?{value:'≈'+match[1],outcome:outcome,note:'At reset · reported estimate',status:'unknown',depletionLeadDays:leadDays}:null};
+    return {headline:leadDays!==null?trafficEarlyDepletionText(leadDays):possible|| (f.algorithmVersion>=5&&f.resetSensitive?'May be tight before reset':empty?'At reported pace: may run out':'At reported pace: lasts to reset'),detail:f.text,status:'unknown',
+      adaptive:match?{value:'≈'+match[1],outcome:outcome,note:'At reset · reported estimate',status:'unknown',depletionLeadDays:leadDays,possibleDepletionLabel:possible}:null};
   }
   if (f.basis === 'reportedHistory' && snapshot.resetDays > 0) {
     // Only a conditional reported-data scenario, not a safe/risk judgment.

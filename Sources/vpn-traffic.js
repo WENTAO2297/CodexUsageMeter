@@ -245,7 +245,9 @@ function restoreMaoMaoYunHistory() {
     var h = normalizeMaoMaoYunHistory(saved.history, maomaoyunTrafficSnapshot, Date.now());
     if (Date.now() - h.fetchedAt <= 35 * 86400000) {
       maomaoyunHistorySnapshot = h;
-      maomaoyunHistoryLastReadAt = h.fetchedAt;
+      // One migration read can recover records the old helper trimmed. Once
+      // the wider response is cached, ordinary six-hour cadence resumes.
+      maomaoyunHistoryLastReadAt = h.retentionDays>=MAOMAOYUN_HISTORY_DAYS?h.fetchedAt:0;
     }
   } catch (ignored) { /* Only anonymous numeric summaries; never log file content. */ }
 }

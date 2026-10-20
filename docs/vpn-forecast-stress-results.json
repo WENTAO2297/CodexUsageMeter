@@ -1,0 +1,227 @@
+{
+  "mode": "synthetic-stress-only",
+  "seeds": [
+    739391,
+    1299709,
+    15485863
+  ],
+  "scenarios": [
+    "steady",
+    "weekly",
+    "rising",
+    "falling",
+    "step",
+    "one-burst",
+    "temporary-level",
+    "missing"
+  ],
+  "summary": {
+    "1": {
+      "n": 192,
+      "v4": {
+        "falseAlarm": 20,
+        "missed": 17,
+        "maeGiB": 2.2124
+      },
+      "mean7": {
+        "falseAlarm": 32,
+        "missed": 11,
+        "maeGiB": 2.3233
+      },
+      "v5": {
+        "falseAlarm": 31,
+        "missed": 10,
+        "maeGiB": 1.9775
+      },
+      "numeric": 0,
+      "numericFalse": 0
+    },
+    "7": {
+      "n": 192,
+      "v4": {
+        "falseAlarm": 0,
+        "missed": 30,
+        "maeGiB": 13.5739
+      },
+      "mean7": {
+        "falseAlarm": 12,
+        "missed": 24,
+        "maeGiB": 14.4224
+      },
+      "v5": {
+        "falseAlarm": 8,
+        "missed": 20,
+        "maeGiB": 11.8464
+      },
+      "numeric": 0,
+      "numericFalse": 0
+    },
+    "28": {
+      "n": 192,
+      "v4": {
+        "falseAlarm": 3,
+        "missed": 54,
+        "maeGiB": 55.3766
+      },
+      "mean7": {
+        "falseAlarm": 15,
+        "missed": 48,
+        "maeGiB": 60.8677
+      },
+      "v5": {
+        "falseAlarm": 8,
+        "missed": 41,
+        "maeGiB": 50.5053
+      },
+      "numeric": 0,
+      "numericFalse": 0
+    }
+  },
+  "details": {
+    "steady/1": {
+      "n": 24,
+      "v4": 0.8865,
+      "mean7": 0.9104,
+      "v5": 0.9034
+    },
+    "steady/7": {
+      "n": 24,
+      "v4": 3.0192,
+      "mean7": 3.6899,
+      "v5": 3.338
+    },
+    "steady/28": {
+      "n": 24,
+      "v4": 6.4552,
+      "mean7": 10.2126,
+      "v5": 6.7267
+    },
+    "weekly/1": {
+      "n": 24,
+      "v4": 2.2417,
+      "mean7": 2.1802,
+      "v5": 2.1144
+    },
+    "weekly/7": {
+      "n": 24,
+      "v4": 2.1765,
+      "mean7": 2.8457,
+      "v5": 5.1295
+    },
+    "weekly/28": {
+      "n": 24,
+      "v4": 6.5969,
+      "mean7": 7.209,
+      "v5": 19.3867
+    },
+    "rising/1": {
+      "n": 24,
+      "v4": 1.3244,
+      "mean7": 0.9562,
+      "v5": 0.9794
+    },
+    "rising/7": {
+      "n": 24,
+      "v4": 10.6381,
+      "mean7": 7.1595,
+      "v5": 6.5006
+    },
+    "rising/28": {
+      "n": 24,
+      "v4": 73.2416,
+      "mean7": 55.3115,
+      "v5": 49.5747
+    },
+    "falling/1": {
+      "n": 24,
+      "v4": 1.5923,
+      "mean7": 1.2487,
+      "v5": 1.3848
+    },
+    "falling/7": {
+      "n": 24,
+      "v4": 10.8347,
+      "mean7": 6.4988,
+      "v5": 7.5825
+    },
+    "falling/28": {
+      "n": 24,
+      "v4": 74.9822,
+      "mean7": 55.3966,
+      "v5": 58.0382
+    },
+    "step/1": {
+      "n": 24,
+      "v4": 5.409,
+      "mean7": 3.1425,
+      "v5": 3.3966
+    },
+    "step/7": {
+      "n": 24,
+      "v4": 33.0798,
+      "mean7": 23.0689,
+      "v5": 25.4682
+    },
+    "step/28": {
+      "n": 24,
+      "v4": 209.7289,
+      "mean7": 165.2805,
+      "v5": 176.9495
+    },
+    "one-burst/1": {
+      "n": 24,
+      "v4": 1.1442,
+      "mean7": 3.0772,
+      "v5": 2.1551
+    },
+    "one-burst/7": {
+      "n": 24,
+      "v4": 21.8552,
+      "mean7": 33.7744,
+      "v5": 22.8566
+    },
+    "one-burst/28": {
+      "n": 24,
+      "v4": 31.9137,
+      "mean7": 88.3544,
+      "v5": 19.6726
+    },
+    "temporary-level/1": {
+      "n": 24,
+      "v4": 4.1875,
+      "mean7": 6.1413,
+      "v5": 3.9875
+    },
+    "temporary-level/7": {
+      "n": 24,
+      "v4": 23.8419,
+      "mean7": 34.6499,
+      "v5": 20.277
+    },
+    "temporary-level/28": {
+      "n": 24,
+      "v4": 32.6126,
+      "mean7": 94.4942,
+      "v5": 62.8969
+    },
+    "missing/1": {
+      "n": 24,
+      "v4": 0.914,
+      "mean7": 0.9303,
+      "v5": 0.8986
+    },
+    "missing/7": {
+      "n": 24,
+      "v4": 3.1458,
+      "mean7": 3.6923,
+      "v5": 3.6188
+    },
+    "missing/28": {
+      "n": 24,
+      "v4": 7.4819,
+      "mean7": 10.6825,
+      "v5": 10.7968
+    }
+  },
+  "limitations": "New random seeds, known constructed patterns, overlapping targets and hypothetical balances. Not real monthly accuracy; stress results were not used to fit SES parameters."
+}

@@ -73,7 +73,7 @@ var img=$.NSImage.alloc.initWithSize($.NSMakeSize(180,metricHeight));img.lockFoc
  var timingSummaries=[{days:28,crossing:18},{days:28,crossing:27},{days:28,crossing:27.5},
   {days:366,crossing:.5}].map(function(sample){return trafficForecastSummary(
    {remainingBytes:100,totalBytes:400,resetDays:sample.days},{hasValue:true,stale:false},
-   {basis:'adaptive',verdict:'risk',typicalConsumption:150,highConsumption:200,crossingDays:sample.crossing,
+   {basis:'adaptive',verdict:'risk',precision:'day',evidence:'supported',typicalConsumption:150,highConsumption:200,crossingDays:sample.crossing,
     horizonDays:sample.days,text:'At reset: ~0G left · estimate only'});});
  ['Weekly','Session','Traffic'].forEach(function(kind){
   (kind==='Traffic'?summaries.concat(timingSummaries):summaries).forEach(function(summary){[false,true].forEach(function(stale){

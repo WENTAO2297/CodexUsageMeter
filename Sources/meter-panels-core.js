@@ -8,7 +8,7 @@ function meterCount(value) {
 // Symbols reinforce the existing status text, never replace it or introduce
 // another risk judgement. Use raw status keys so both locales stay identical.
 function meterStatusSymbol(label) {
-  if(/^(Empty .* early|Est\. empty .* early|Estimated empty .* before reset|Before reset|At reset depletion|Low reserve)$/.test(label||''))
+  if(/^(Empty .* early|Est\. empty .* early|May run out .*d early|Estimated empty .* before reset|Before reset|At reset depletion|Low reserve)$/.test(label||''))
     return 'exclamationmark.triangle.fill';
   return {'On pace':'checkmark.circle.fill','Above pace':'exclamationmark.triangle.fill',
     'Quota low':'exclamationmark.circle.fill','Exhausted':'exclamationmark.circle.fill',
@@ -20,6 +20,10 @@ function meterStatusSymbol(label) {
     'Read failed':'exclamationmark.circle','Rate limited':'clock',
     'Account unavailable':'person.crop.circle.badge.questionmark','Sign in to Codex':'person.crop.circle.badge.questionmark',
     'Reserve at reset':'checkmark.circle.fill','Observing':'hourglass','History gaps':'info.circle',
+    'Cycle on pace':'info.circle','Cycle use ahead':'exclamationmark.triangle.fill',
+    'May run out':'exclamationmark.triangle.fill','May be tight':'exclamationmark.triangle.fill',
+    'Possible depletion':'exclamationmark.triangle.fill','Recent use rising':'exclamationmark.triangle.fill',
+    'Near-term depletion':'exclamationmark.triangle.fill','Forecast observing':'hourglass',
     'Paused':'pause.circle'}[label]||null;
 }
 function quotaPaceModel(window,now,stale) {

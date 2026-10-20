@@ -1,4 +1,5 @@
-// Official Profile activity is independent of quota forecasts and local logs.
+// Official Profile activity stays unmodified; quota reconstruction only reads
+// its validated daily totals into a separate, explicitly estimated history.
 function readTokenMeterCache(account) {
   if(!account)return null;
   try{
@@ -52,5 +53,6 @@ function pollTokenMeterRead() {
       logError('token-meter',new Error('Profile statistics unavailable (status '+status+').'));
     }
     refreshTokenMeterMenu(true);
+    if(typeof recordAdaptiveQuota==='function'&&typeof usageSyncState!=='undefined'&&usageSyncState==='ready')recordAdaptiveQuota(quotaWindows);
   }finally{tokenMeterPolling=false;}
 }

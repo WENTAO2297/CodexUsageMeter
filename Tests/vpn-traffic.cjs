@@ -30,10 +30,16 @@ for(const bad of [null,undefined,-1,1.5,'31',true,false]) {
 }
 const historyWire=(state='ready',dayBytes=100,at=now)=>JSON.stringify({version:3,state:'history',history:{
   state,accountKey:'a'.repeat(64),credentialRevision:'a'.repeat(64),identityKind:'session',completeness:'unverified',
-  billingBasis:'website-u+d',bucketBasis:'utc-24h',fetchedAt:at,days:state==='ready'?[[Math.floor(now/86400000)*86400-86400,dayBytes]]:[],rowCount:1,
+  billingBasis:'website-u+d',bucketBasis:'utc-24h',retentionDays:180,fetchedAt:at,days:state==='ready'?[[Math.floor(now/86400000)*86400-86400,dayBytes]]:[],rowCount:1,
   calendarBasis:'local-midnight',calendarState:'ready',calendarDays:[]}});
 const history=core.parseMaoMaoYunHistoryResult(historyWire(),first,now).history;
 assert.equal(history.days[0][1],100);assert.equal(history.completeness,'unverified');
+assert.equal(history.retentionDays,180);
+const expandedHistory={...history,days:Array.from({length:180},(_,i)=>[Math.floor(now/86400000)*86400-(179-i)*86400,i])};
+assert.equal(core.normalizeMaoMaoYunHistory(expandedHistory,first,now).days.length,180);
+assert.throws(()=>core.normalizeMaoMaoYunHistory({...expandedHistory,days:[[expandedHistory.days[0][0]-86400,1],...expandedHistory.days]},first,now));
+assert.equal(core.normalizeMaoMaoYunHistory({...history,retentionDays:undefined},first,now).retentionDays,35,'legacy caches retain a narrow-source marker');
+for(const retentionDays of [0,34,181,1.5,'180'])assert.throws(()=>core.normalizeMaoMaoYunHistory({...history,retentionDays},first,now));
 assert.equal(core.parseMaoMaoYunHistoryResult(historyWire('ready',150),first,now).history.days[0][1],150,'Revised days replace, never sum with old response');
 for(const bad of [historyWire().replace('website-u+d','raw-network'),historyWire().replace('a'.repeat(64),'b'.repeat(64)),
  historyWire().replace('unverified','complete'),historyWire().replace(',100]',',-1]'),'x'.repeat(8193)])
@@ -282,6 +288,8 @@ try {
  assert(!fs.readFileSync(cachePath,'utf8').includes('TEST_SECRET'));
  const saved=nativeRun('restoreMaoMaoYunHistory();JSON.stringify({count:maomaoyunHistorySnapshot.dayCount,last:maomaoyunHistoryLastReadAt});');
  assert.equal(saved.count,1);assert.equal(saved.last,history.fetchedAt,'validated cache maintains six-hour cadence across restart');
+ const legacy=nativeRun('var h='+JSON.stringify(history)+';delete h.retentionDays;writePrivateJSON(maomaoyunHistoryPath,{version:1,history:h});restoreMaoMaoYunHistory();JSON.stringify({count:maomaoyunHistorySnapshot.dayCount,last:maomaoyunHistoryLastReadAt});');
+ assert.equal(legacy.count,1);assert.equal(legacy.last,0,'old cache remains usable but permits one migration read for earlier dates');
  assert.equal(nativeRun('maomaoyunTrafficSnapshot.credentialRevision="'+('b'.repeat(64))+'";restoreMaoMaoYunHistory();JSON.stringify(maomaoyunHistorySnapshot);'),null);
  const texts=['Budget ~389.15G/day · learning','If reported pace holds: >999 days left','If reported pace holds: ~999.99T left','Reset schedule unavailable'];
  const widths=nativeRun('JSON.stringify('+JSON.stringify(texts)+'.map(function(t){return Number($(t).sizeWithAttributes(cardAttributes(9,cardColors().body,false)).width);}));');

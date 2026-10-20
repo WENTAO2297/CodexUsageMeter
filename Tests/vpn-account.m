@@ -74,8 +74,19 @@ int main(void) {
         NSCAssert([NormalizeAccountHistory(@{@"data": rows}, revision, now)[@"state"] isEqualToString:@"ready"], @"Old dates must trim without rejecting valid recent history");
         [rows removeAllObjects];
         for (int i = 0; i < 56; i++) [rows addObject:@{@"record_at": @(1999900000LL - i * 86400LL), @"u": @(i), @"d": @0}];
-        NSDictionary *trimmed = NormalizeAccountHistory(@{@"data": rows}, revision, now);
-        NSCAssert([trimmed[@"days"] count] <= 35 && [trimmed[@"diagnostics"][@"retentionTrimmed"] boolValue], @"56 days must trim to recent 35-day retention");
+        NSDictionary *expanded = NormalizeAccountHistory(@{@"data": rows}, revision, now);
+        NSCAssert([expanded[@"days"] count] == 56 && ![expanded[@"diagnostics"][@"retentionTrimmed"] boolValue], @"Recover all 56 days, not only the recent 35");
+        NSCAssert([expanded[@"retentionDays"] intValue] == 180, @"Report the supported history retention for cache migration");
+        [rows removeAllObjects];
+        for (int i = 0; i < 200; i++) [rows addObject:@{@"record_at": @(localStart - i * 86400LL),
+            @"u": @9007199254740991.0, @"d": @0}];
+        long long archiveNow = (localStart + 3600) * 1000;
+        NSDictionary *trimmed = NormalizeAccountHistory(@{@"data": rows}, revision, archiveNow);
+        NSCAssert([trimmed[@"days"] count] == 180 && [trimmed[@"diagnostics"][@"retentionTrimmed"] boolValue], @"Bound the expanded archive at 180 UTC dates");
+        NSCAssert([trimmed[@"calendarDays"] count] == 35, @"The chart keeps its small calendar response and unchanged range");
+        NSData *boundedOutput = [NSJSONSerialization dataWithJSONObject:@{@"version":@3,@"state":@"history",@"history":trimmed} options:0 error:nil];
+        NSCAssert(boundedOutput.length < 8192,
+            @"Even maximum safe counts over 180 dates and 35 chart dates must fit the existing nonblocking pipe bound");
         NSDictionary *duplicate = @{@"record_at": @1999900000, @"u": @10, @"d": @20};
         NSCAssert([NormalizeAccountHistory(@{@"data": @[duplicate, duplicate]}, revision, now)[@"state"] isEqualToString:@"partial"], @"Unconfirmed duplicate rows cannot double count");
         NSCAssert([NormalizeAccountHistory(@{@"data": @{}}, revision, now)[@"state"] isEqualToString:@"unsupported"], @"Unknown shape accepted");

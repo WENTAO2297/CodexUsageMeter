@@ -1,6 +1,7 @@
 // Only the account helper's sanitized byte protocol crosses into JXA. The
 // website response and credentials stay inside the native Keychain helper.
 var MAOMAOYUN_TRAFFIC_FRESH_MS = 10 * 60 * 1000;
+var MAOMAOYUN_HISTORY_DAYS = 180;
 
 function maoMaoYunTrafficInteger(value) {
   return typeof value === 'number' && isFinite(value) && value >= 0 &&
@@ -187,11 +188,12 @@ function normalizeMaoMaoYunHistory(history, snapshot, now) {
   if (!history || !snapshot || history.accountKey !== snapshot.accountKey || history.credentialRevision !== snapshot.credentialRevision ||
       history.identityKind !== 'session' || !maoMaoYunTrafficInteger(history.fetchedAt) || history.fetchedAt <= 0 || history.fetchedAt > now + 60000 ||
       ['ready','partial','unsupported'].indexOf(history.state) === -1 || history.completeness !== 'unverified' ||
-      history.billingBasis !== 'website-u+d' || history.bucketBasis !== 'utc-24h' || !Array.isArray(history.days) || history.days.length > 35) throw new Error('Invalid history protocol');
+      history.billingBasis !== 'website-u+d' || history.bucketBasis !== 'utc-24h' || !Array.isArray(history.days) || history.days.length > MAOMAOYUN_HISTORY_DAYS ||
+      history.retentionDays!==undefined&&(!maoMaoYunTrafficInteger(history.retentionDays)||history.retentionDays<35||history.retentionDays>MAOMAOYUN_HISTORY_DAYS)) throw new Error('Invalid history protocol');
   var days = [], previous = 0;
   history.days.forEach(function(day) {
     if (!Array.isArray(day) || day.length !== 2 || !maoMaoYunTrafficInteger(day[0]) || day[0]%86400!==0 || day[0] <= previous || day[0] * 1000 > history.fetchedAt + 60000 ||
-        day[0]<Math.floor(history.fetchedAt/86400000)*86400-34*86400 ||
+        day[0]<Math.floor(history.fetchedAt/86400000)*86400-(MAOMAOYUN_HISTORY_DAYS-1)*86400 ||
         !maoMaoYunTrafficInteger(day[1])) throw new Error('Invalid history day');
     previous = day[0]; days.push(day.slice());
   });
@@ -200,6 +202,7 @@ function normalizeMaoMaoYunHistory(history, snapshot, now) {
   if(history.state!=='ready'&&calendar.calendarDays.length)throw new Error('Partial calendar history must abstain');
   return {accountKey:snapshot.accountKey,credentialRevision:snapshot.credentialRevision,identityKind:'session',
     state:history.state,completeness:'unverified',billingBasis:'website-u+d',bucketBasis:'utc-24h',fetchedAt:history.fetchedAt,days:days,
+    retentionDays:history.retentionDays===undefined?35:history.retentionDays,
     rowCount:maoMaoYunTrafficInteger(history.rowCount) ? history.rowCount : 0,dayCount:days.length,
     sourceStart:days.length ? days[0][0] : null,sourceEnd:days.length ? days[days.length-1][0] : null,
     diagnostics:maoMaoYunHistoryDiagnostics(history.diagnostics),

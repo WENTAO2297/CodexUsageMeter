@@ -1,5 +1,15 @@
 # 开发说明
 
+当前预测为额度第5版、VPN第7版，运行机制与验证边界以[上海日历预测验收](FORECAST_DESIGN.md#2026-10-20-上海日历额度第5版vpn第7版)及[额度重建](TOKEN_FORECAST.md)为准。界面仍沿用已验收的288pt原生布局。以下按日期保留开发记录；标注第4版或更早的说明属于历史，不代表当前算法、缓存文件名或提示语义。
+
+## 2026-10-19 第4版预测
+
+该阶段行为见 [FORECAST_V4.md](FORECAST_V4.md)。新增纯模块 forecast-learning-core，负责真实目标期限、睡眠前后消耗界、独立同期限评分和版本隔离；adaptive-forecast-core 保留候选生成与路径组合，增加同周期余额的持续变化检测及提示精度准入。现有288pt布局、读数、后台查询频率和图表交互不变。以下带日期的旧实现说明保留为历史，不代表当前提示仍只根据周期进度判断。
+
+prediction-v4-quota.json / prediction-v4-vpn.json 与旧版分开写入；只在v4文件不存在时读取并校验v3，原文件不改写。继承的预测标为modelVersion=3，不进入v4权重学习。最多180天、1200条预测、1600个额度锚点、182个日记录及7天/200个余额点；上限2MiB，账号/会话隔离和0700/0600原子写入保留。缓存损坏不通过回退旧文件绕过校验。
+
+离线回归新增forecast-v4.cjs，adaptive-forecast.cjs实测Foundation迁移与权限，menu-layout.cjs实测双语预测/周期/定性日期的真实绘制。两个forecast-v4-*-backtest.cjs是额外可重现的合成前瞻回放，默认使用未参与开发的种子；不在每次安装时重复运行昂贵回放，也不等同真实长期准确率。
+
 ## 2026-10-19 顶部猫猫云轻量化
 
 按用户最新要求恢复贴合名称和状态点的悬停灰底及白字，移除打开APP的原生提示。128×24pt客户端入口、点击路由和共享悬停清理保留；drawMenuRowHighlight通过可选inset/contentWidth仅将此入口绘制为名称实际advance+30pt（左8＋名称＋间隔8＋圆点6＋右8），其它行继续整行灰底。12%白色、5pt圆角和迟到回调保护不变，不增加浮窗或计时器。vpn-header核验双语状态下等边距和点击区不缩小，menu-actions覆盖悬停切换/移出/关闭，hover-popups检查刷新、语言切换和重开后均无原生提示。
@@ -103,11 +113,12 @@ VPN/Codex标题仍12pt粗体，重置卡与Token活动用12pt NSFontWeightMedium
 - Sources/token-activity.js：7/30天Token柱/VPN线、独立双轴、按日期合并及原生绘制；一个NSTrackingArea驱动图内三栏提示，复用菜单维护，不创建独立窗口或鼠标计时器，保留任一数据源、范围与几何重入的owner校验。
 - Sources/token-meter.js、token-profile-reader.m：官方个人资料Token数据后台任务、固定HTTPS来源、独立私有缓存、单飞/限频/看门狗与账号切换清理，复用现有2秒维护计时器检查期限。
 - Sources/forecast-core.js：纯预测算法、样本合并和预测历史校验。
-- Sources/adaptive-forecast-core.js：第3版官方间隔、官网修订、期限分组、条件路径、延迟真值评分和私有日志校验；不含系统调用。
-- Sources/adaptive-forecast.js：第3版私有日志 I/O、账号及会话绑定、后台更新后的预测缓存；绘制路径不扫描历史或写日志。
+- Sources/adaptive-forecast-core.js：第4版官方间隔、官网修订、持续余额变化、条件路径、证据/提示精度及私有日志校验；不含系统调用。
+- Sources/forecast-learning-core.js：不可变事前预测、实际/标准/重置前目标、上下界结算、不重叠同期限权重学习与v3/v4隔离。
+- Sources/adaptive-forecast.js：第4版私有日志I/O、只读迁移、账号及会话绑定、后台更新后的预测缓存；绘制路径不扫描历史或写日志。
 - Sources/token-forecast-core.js：同账号同套餐历史token/额度校准，作为Weekly连续观察不足时的中性粗估后备。
 - Sources/token-history-reader.m、token-history.js：内嵌只读原生汇总程序、私有数字缓存与低频非阻塞扫描生命周期；详见 [历史粗估验证](TOKEN_FORECAST.md)。
-- Sources/forecast-display.js：原有预测结果的纯展示摘要；不改变算法门槛、时间范围、状态颜色或数据源。
+- Sources/forecast-display.js：纯展示摘要与预测/周期来源区分；遵守算法给出的证据和日期精度，不在绘制中另算模型。
 - Sources/runtime.js：AppKit 桥接、公共后台任务、定时器与错误日志。
 - Sources/state.js：按现有默认值初始化共享状态与配置。
 - Sources/appearance.js：共享的颜色、字体、文字与进度条绘制。

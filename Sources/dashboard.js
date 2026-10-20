@@ -33,6 +33,7 @@ function dashboardForecast(summary) {
   var outcome=outcomes[row.outcome]||row.outcome;
   if(row.outcome==='May run out'&&typeof row.depletionLeadDays==='number'&&isFinite(row.depletionLeadDays)&&row.depletionLeadDays>0)
     outcome=trafficEarlyDepletionText(row.depletionLeadDays);
+  else if(row.possibleDepletionLabel)outcome=row.possibleDepletionLabel;
   return {label:label,value:row.value.replace(/^≈/,''),outcome:outcome,basis:basis,status:row.status};
 }
 
@@ -146,11 +147,13 @@ function drawMeterStatusText(text,x,y,width,size,color,bold,align,symbol,tone) {
 }
 
 function dashboardMetricBadge(data) {
-  if(data.kind!=='traffic')return quotaPaceModel(data.window,Date.now()/1000,data.stale);
+  if(data.kind!=='traffic')return quotaPredictionBadge(data.window,data.forecast,Date.now()/1000,data.stale);
+  if(data.forecast)return trafficPredictionBadge(data,data.forecast);
   var label=!data.hasValue?'No data':data.stale?'Last known':compactOutcomeText(data,dashboardForecast(data.summary));
   // Colors distinguish visible states only; a green reserve badge does not
   // change the forecast's evidence/confidence or turn it into a guarantee.
-  return {label:label,tone:label==='Exhausted'?'critical':/^Est\. empty .* early$/.test(label)?'warning':label==='Reserve at reset'?'normal':'muted'};
+  return {label:label,tone:label==='Exhausted'?'critical':/^(Est\. empty|May run out) .* early$/.test(label)||
+    ['Before reset','Low reserve','At reset depletion','May run out','May be tight'].indexOf(label)>=0?'warning':label==='Reserve at reset'?'normal':'muted'};
 }
 
 function dashboardBadgeLayout(title,badge,width,titleSize) {

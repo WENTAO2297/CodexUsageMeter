@@ -97,6 +97,12 @@ try{
  const read=cutoff=>JSON.parse(execFileSync(binary,[root,String(cutoff)],{encoding:'utf8'}));
  const result=read(now);assert.equal(result.accountId,'fixture-account');assert.equal(result.anchors.at(-1).used,35,'duration identifies Weekly, not primary position');
  assert.equal(result.days.reduce((s,d)=>s+d.counts[0]+d.counts[2],0),3960,'fork copies and auto-review are excluded; reasoning not double counted');
+ const plusLines=lines.map(line=>line.payload&&line.payload.rate_limits?{...line,payload:{...line.payload,
+   rate_limits:{...line.payload.rate_limits,plan_type:'plus'}}}:line);
+ write('sessions','one',plusLines);write('archived_sessions','fork',[meta('fork'),...plusLines.slice(1)]);
+ const plus=read(now);assert.equal(plus.anchors.at(-1).plan,'plus');assert.equal(plus.anchors.at(-1).used,35,
+   'Plus uses the 10080-minute weekly window, never the 300-minute/99%-used session, in either primary/secondary position');
+ write('sessions','one',lines);write('archived_sessions','fork',[meta('fork'),...lines.slice(1)]);
  assert(!/session|turn-one|foreign|prompt|token[s]?"/.test(JSON.stringify(result)),'output contains only numeric aggregates and model/plan metadata');
  const past=read(time+3600*10);assert.equal(past.anchors.at(-1).used,10,'real reader cutoff excludes future events');
  assert.equal(past.days.reduce((s,d)=>s+d.counts[0]+d.counts[2],0),1210);

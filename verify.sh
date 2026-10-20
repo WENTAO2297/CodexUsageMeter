@@ -25,12 +25,17 @@ if /usr/bin/grep -Eq 'pinned|Pinned|PINNED|unreadCompleted|CompletedTaskView|mar
 fi
 if command -v node >/dev/null; then
   node "$SCRIPT_DIR/Tests/architecture.cjs"
+  node "$SCRIPT_DIR/Tests/test-storage.cjs"
   node "$SCRIPT_DIR/Tests/regression.cjs"
   node "$SCRIPT_DIR/Tests/forecast.cjs"
   node "$SCRIPT_DIR/Tests/adaptive-forecast.cjs"
+  node "$SCRIPT_DIR/Tests/forecast-v4.cjs"
+  node "$SCRIPT_DIR/Tests/vpn-forecast.cjs"
+  node "$SCRIPT_DIR/Tests/calendar-forecast.cjs"
   node "$SCRIPT_DIR/Tests/forecast-display.cjs"
   node "$SCRIPT_DIR/Tests/observed-usage.cjs"
   node "$SCRIPT_DIR/Tests/token-forecast.cjs"
+  node "$SCRIPT_DIR/Tests/quota-reconstruction.cjs"
   node "$SCRIPT_DIR/Tests/token-meter.cjs"
   node "$SCRIPT_DIR/Tests/token-activity.cjs"
   node "$SCRIPT_DIR/Tests/activity-range.cjs"

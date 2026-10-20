@@ -10,6 +10,9 @@ var languageReveal = 0;
 var languageAnimation = {timer:null,from:0,to:0,startedAt:0};
 var UI_ZH = {
   'Above pace':'消耗偏快', 'On pace':'进度正常',
+  'Cycle on pace':'进度正常', 'Cycle use ahead':'消耗偏快',
+  'Possible depletion':'可能提前用尽', 'Near-term depletion':'近期可能耗尽',
+  'Recent use rising':'近期用量上升', 'Forecast observing':'预测观察中',
   'Quota low':'余量偏低', 'Resetting':'正在重置', 'Reset unknown':'重置未知',
   'Reset cards':'重置卡', 'No reset cards':'暂无重置卡', 'Awaiting quota':'等待额度更新',
   'Expired · refreshing':'已到期，待更新', 'Expiry':'到期时间', 'Official grant':'官网发放',
@@ -135,6 +138,9 @@ function uiText(value) {
   var expiryCountdown=/^Expires in (\d+[dhm](?: \d+[dhm])*)$/.exec(text);
   if(expiryCountdown)return uiText(expiryCountdown[1])+'后到期';
   if (Object.prototype.hasOwnProperty.call(UI_ZH, text)) return UI_ZH[text];
+  // Numeric risk phrases must precede the shorter "May run out" literal.
+  text=text.replace(/May run out ~(<1|\d+)d early/g,'提前约 $1 天用尽')
+    .replace(/May run out (\d+–\d+)d early/g,'提前约 $1 天用尽');
   // Translate longest literal phrases first, including explanations composed
   // from numeric fragments. Numbers, dates, symbols and proper names stay intact.
   UI_ZH_KEYS.forEach(function(key) {
@@ -142,7 +148,7 @@ function uiText(value) {
   });
   return text
     .replace(/Estimated empty (<1|\d+)d before reset/g, '预计重置前 $1 天用尽')
-    .replace(/Est\. empty (<1|\d+)d early/g, '预计提前 $1 天用尽')
+    .replace(/Est\. empty (<1|\d+)d early/g, '提前约 $1 天用尽')
     .replace(/Empty (<1|\d+)d early/g, '重置前 $1 天用尽')
     .replace(/^In (\d+[hm](?: \d+[hm])?)$/, '$1 后预计')
     .replace(/^After (\d+)d$/, '$1天后剩余')

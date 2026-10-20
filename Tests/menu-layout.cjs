@@ -9,15 +9,26 @@ delegate=$.NSObject.alloc.init;statusItem={};buildMenu();
 var now=Date.now(),unit=Math.pow(1024,3),mode='ready',row=null,records=[],previews=[];
 maomaoyunStatus='connected';updateMaoMaoYunMenuItem();
 availableCredits=2;resetCreditExpirations=[now/1000+14*86400,now/1000+21*86400];
-currentMaoMaoYunForecast=function(){return mode==='unknown'||mode==='noReset'?{status:'unknown',reason:'Need 3 reported days'}:
- {basis:'adaptive',verdict:mode==='risk'||mode==='boundary'?'risk':'safe',
- typicalConsumption:(mode==='risk'||mode==='boundary'?400:235.44)*unit,highConsumption:450*unit,
- crossingDays:mode==='boundary'?27.5:mode==='risk'?18:29,horizonDays:28,
- text:'At reset: ~'+(mode==='risk'||mode==='boundary'?'0':'140')+'G left · estimate only'};};
+currentMaoMaoYunForecast=function(){var risk=mode==='risk'||mode==='boundary'||/^coarse/.test(mode)||mode==='noTiming';
+ return mode==='unknown'||mode==='noReset'?{status:'unknown',reason:'Need 3 reported days'}:
+ {basis:'adaptive',evidence:mode==='cycle'?'limited':'supported',precision:mode==='risk'||mode==='boundary'?'day':'qualitative',
+ verdict:risk?'risk':mode==='tight'?'tight':'safe',recentChange:mode==='rising'?'up':null,
+ typicalConsumption:(risk?400:235.44)*unit,highConsumption:450*unit,
+ crossingDays:mode==='boundary'||mode==='coarseSubday'?27.5:/^coarse/.test(mode)?23:mode==='risk'?18:29,
+ crossingRange:mode==='coarseRange'?[21,25]:[12,29],horizonDays:28,
+ text:'At reset: ~'+(risk?'0':'140')+'G left · estimate only'};};
 currentQuotaForecasts=function(){return quotaWindows.map(function(w){
  if(mode==='stale'||mode==='unknown')return {status:'unknown',reason:'Quota unavailable'};
  if(mode==='exhausted')return {status:'exhausted'};
- return {basis:'adaptive',verdict:mode==='risk'?'risk':'safe',text:'~'+(mode==='risk'?'0':'15–30')+'% at reset'};
+ if(w.durationMins===300)return {basis:'recent',projectedRemaining:-2,horizon:1800,status:'risk',text:'If pace holds: empty within 30m'};
+ if(/^quota/.test(mode)){
+  var h=(w.resetAt-now/1000)/86400;
+  return {basis:'adaptive',evidence:mode==='quotaLimited'?'limited':'supported',verdict:'risk',
+   at:now/1000-(mode==='quotaOld'?181:0),resetAt:w.resetAt+(mode==='quotaChanged'?86400:0),horizonDays:h,
+   crossingDays:h-(mode==='quotaSubday'?.5:2),crossingRange:mode==='quotaRange'?[h-4,h-1]:[h-3,h+1],
+   typicalConsumption:90,text:'~0% at reset'};
+ }
+ return {basis:'adaptive',evidence:mode==='cycle'?'limited':'supported',verdict:mode==='risk'?'risk':mode==='tight'?'tight':'safe',text:'~'+(mode==='risk'?'0':'15–30')+'% at reset'};
 });};
 observedQuotaUseLabel=function(w){return w.durationMins===300?'Actual hourly use: 2 pp':'Actual daily use: 24.2 pp';};
 function rect(v){var f=v.frame;return {x:Number(f.origin.x),y:Number(f.origin.y),w:Number(f.size.width),h:Number(f.size.height)};}
@@ -38,8 +49,9 @@ drawDashboardValue=function(t,x,y,w,size,color,align){var r=savedValue(t,x,y,w,s
 drawRoundedBar=function(x,y,w,h,f,color){if(row)row.bars.push({x:x,y:y,w:w,h:h,fraction:f,muted:!!(color&&color.isEqual(cardColors().muted))});
  savedBar(x,y,w,h,f,color);};
 ['zh-CN','en'].forEach(function(locale){uiLanguage=locale;
- ['ready','risk','boundary','unknown','stale','login','exhausted','session','pending','todayZero','noReset','long'].forEach(function(next){mode=next;
-  var remaining=mode==='exhausted'?0:mode==='unknown'?null:68;
+ ['ready','risk','boundary','coarse','coarseRange','coarseSubday','noTiming','cycle','rising','tight','unknown','stale','login','exhausted','session','pending','todayZero','noReset','long',
+  'quotaEarly','quotaRange','quotaSubday','quotaLimited','quotaOld','quotaChanged','quotaCritical'].forEach(function(next){mode=next;
+  var remaining=mode==='exhausted'?0:mode==='unknown'?null:mode==='quotaCritical'?3:68;
   quotaWindows=[{label:'Weekly',durationMins:10080,remaining:remaining,resetAt:now/1000+5*86400+2*3600}];
   if(mode==='session')quotaWindows.unshift({label:'Session',durationMins:300,remaining:80,resetAt:now/1000+3*3600});
   usageSyncState=mode==='stale'||mode==='unknown'?'error':'ready';
@@ -78,7 +90,7 @@ drawRoundedBar=function(x,y,w,h,f,color){if(row)row.bars.push({x:x,y:y,w:w,h:h,f
   // status may legitimately cross the old header-row probe at the midpoint.
   sample.noVerticalTail=[sample.quota,sample.vpn].every(function(frame){return Math.abs(red(MENU_WIDTH/2,frame.y+45)-red(MENU_WIDTH/2+2,frame.y+45))<.005;});
   ${previewRoot?`
-  if(['ready','risk','stale','login','session'].indexOf(mode)!==-1){
+  if(['ready','risk','coarse','coarseRange','coarseSubday','cycle','stale','login','session','quotaEarly','quotaRange','quotaSubday','quotaLimited'].indexOf(mode)!==-1){
    var filename=${JSON.stringify(previewRoot)}+'/'+locale+'-'+mode+'.png';
    rep.representationUsingTypeProperties($.NSBitmapImageFileTypePNG,$({})).writeToFileAtomically(filename,true);previews.push(filename);
   }`:''}
@@ -157,17 +169,32 @@ for(const s of out.records){
    assert.equal(r.values.length,titles.length,'only the actual balance remains for each Codex window');
    assert(!r.text.some(t=>['Est. reserve','Resets','Daily avg.','Hourly use','Forecast'].includes(t.t)),'quota statistics captions removed');
    if(s.mode==='session')assert(r.text.some(t=>t.t==='Codex Session'),'Session appears in addition to Weekly');
+   if(s.mode==='session')assert(r.text.some(t=>t.t==='Near-term depletion'),'short-term risk cannot promise a full Session cycle');
+   if(s.mode==='risk')assert(r.text.some(t=>t.t==='May run out'),'a supported prediction overrides apparently normal cycle pace');
+   assert(!r.text.some(t=>/d early$|提前约/.test(t.t)||/提前约/.test(t.localized)),'quota reminders never display depletion days; real reset countdowns remain');
+   if(['quotaEarly','quotaRange','quotaSubday','quotaOld','quotaChanged'].includes(s.mode))
+    assert(r.text.some(t=>t.t==='May run out'),'supported quota risk stays qualitative regardless of path timing');
+   if(s.mode==='quotaLimited')assert(r.text.some(t=>t.t==='Cycle on pace'&&t.muted),'limited quota paths restore the explicit neutral cycle reminder');
+   if(s.mode==='quotaCritical')assert(r.text.some(t=>t.t==='Quota low')&&r.icons.some(i=>i.tone==='critical'),'real low quota overrides forecast timing');
+   if(s.mode==='cycle')assert(r.text.some(t=>t.t==='Cycle on pace'&&t.muted&&t.localized===(s.locale==='zh-CN'?'进度正常':'Cycle on pace')),'neutral pace reminder keeps its source but drops the Chinese cycle prefix');
   }else{
    assert(!r.text.some(t=>t.t==='Today'),'today consumption belongs only in the expanded activity chart');
    assert(!r.text.some(t=>t.t==='Est. reserve'||t.t==='Forecast'),'old forecast cells and labels deleted');
    assert.equal(r.values.length,1,'only current balance remains in the main VPN panel');
    if(s.mode==='risk')assert(r.text.some(t=>t.t==='Est. empty 10d early'),'ten days BEFORE reset, not ten days from now');
    if(s.mode==='boundary')assert(r.text.some(t=>t.t==='Est. empty <1d early'));
+   if(s.mode==='coarse')assert(r.text.some(t=>t.t==='May run out ~5d early')&&!r.text.some(t=>/^Est\. empty/.test(t.t)),'existing timing remains an explicitly possible approximation');
+   if(s.mode==='coarseRange')assert(r.text.some(t=>t.t==='May run out 3–7d early'),'wide early-crossing scenarios use an outward-rounded range');
+   if(s.mode==='coarseSubday')assert(r.text.some(t=>t.t==='May run out ~<1d early'),'sub-day rough timing cannot round to zero days');
+   if(s.mode==='noTiming')assert(r.text.some(t=>t.t==='Possible depletion'),'no crossing time still means no invented days');
+   if(s.mode==='cycle')assert(r.text.some(t=>t.t==='Forecast observing'&&t.muted),'limited VPN evidence remains neutral');
+   if(s.mode==='rising')assert(r.text.some(t=>t.t==='Recent use rising'),'sustained recent change has an explicit warning');
    if(s.mode==='risk'||s.mode==='boundary')assert(r.icons.some(i=>i.name==='exclamationmark.triangle.fill'&&i.size===12&&i.tone==='warning'&&i.painted),'native amber alert matches the title size');
    if(s.mode==='stale')assert(r.icons.some(i=>i.name==='clock'&&i.tone==='muted'),'old data never shows a fresh prediction badge');
    if(s.mode==='noReset')assert(r.text.some(t=>t.t==='Reset unknown'),'unknown reset does not gain a deadline or at-reset claim');
    if(s.mode==='login'||s.mode==='unknown')assert(r.rings.every(b=>b.fraction===null),'missing data is an empty track, not a fabricated zero balance');
   }
+  if(s.mode==='tight')assert(r.text.some(t=>t.t==='May be tight'),'both sources share the same qualitative tight warning');
  }
 }
 console.log('C dashboard passed: compact 64pt rows, no today/metadata row, matching dividers, native rings, bottom-right reset times and optional Session.');

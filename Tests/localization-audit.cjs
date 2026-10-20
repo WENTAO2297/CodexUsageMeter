@@ -15,6 +15,7 @@ for(const unit of ['B','K','M','G','T']) cases.push('1'+unit+' remaining · stal
 cases.push('If pace holds: empty within 1h 30m','Resets 10/14 09:37 · 6d 3h',
  'Estimated empty 10d before reset','Estimated empty <1d before reset',
  'Est. empty 1d early','Est. empty 366d early','Est. empty <1d early','Traffic · Estimated empty 10d before reset',
+ 'May run out ~5d early','May run out ~<1d early','May run out 3–7d early','Traffic · May run out ~5d early',
  'Resets in 6d 3h','Resets in 1h 30m','Resets in 5m',
  'Expires in 12d','Expires in 1h','Expires in 5m',
  'Historical rough estimate · ~0–30% at reset',

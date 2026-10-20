@@ -7,6 +7,10 @@ token-forecast-core
 observed-usage
 vpn-traffic-core
 adaptive-forecast-core
+quota-reconstruction-core
+forecast-learning-core
+vpn-forecast-models
+vpn-forecast-core
 forecast-display
 runtime
 state

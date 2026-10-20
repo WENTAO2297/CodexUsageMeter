@@ -25,7 +25,7 @@ for(var day=6;day>=0;day--){
 maomaoyunTrafficSnapshot.calendarBasis='local-midnight';maomaoyunTrafficSnapshot.calendarState='ready';
 maomaoyunTrafficSnapshot.calendarReportedAt=${now}*1000;
 maomaoyunTrafficSnapshot.calendarDays=maomaoyunHistorySnapshot.calendarDays;
-currentMaoMaoYunForecast=function(){return {basis:'adaptive',verdict:'safe',typicalConsumption:235.44*unit,
+currentMaoMaoYunForecast=function(){return {basis:'adaptive',evidence:'supported',precision:'qualitative',verdict:'safe',typicalConsumption:235.44*unit,
  highConsumption:250*unit,horizonDays:28,text:'At reset: ~140G left · estimate only'};};
 quotaWindows=[{label:'Weekly',durationMins:10080,remaining:18,resetAt:${now}+4.4*86400}];
 availableCredits=2;resetCreditExpirations=[${now}+2*86400,${now}+13*86400];
@@ -35,7 +35,12 @@ var ordinaryResetCards=resetCreditCards,nextYear=new Date().getFullYear()+1;
 var yearResetCards=observeResetCards([{expiresAt:new Date(nextYear,0,11).getTime()/1000,grantedAt:${now}-28*86400},
  {expiresAt:new Date(nextYear,10,30).getTime()/1000,grantedAt:${now}-17*86400}],[],[],${now},2);
 var source=${JSON.stringify(snapshot)};tokenMeterSnapshot=normalizeTokenMeter(source,usageAccountId,${now});tokenMeterSync='ready';
-currentQuotaForecasts=function(){return [{basis:'adaptive',verdict:'risk',text:'~0% at reset'}];};
+// The collapsed README preview uses an explicitly safe demo at full balance;
+// other fixture states retain the risk case. Neither reads real account data.
+currentQuotaForecasts=function(){var safe=quotaWindows[0].remaining===100;
+ return [{basis:'adaptive',evidence:'supported',verdict:safe?'safe':'risk',
+  pointRemaining:safe?80:0,typicalConsumption:safe?20:200,highConsumption:safe?30:250,
+  text:safe?'~80% at reset':'~0% at reset'}];};
 observedQuotaUseLabel=function(){return 'Actual daily use: 22 pp';};
 refreshAllSources=function(){throw Error('No readers during rendering');};
 var failures=[];logError=function(component,error){failures.push(component+': '+String(error));};
@@ -146,7 +151,9 @@ function renderVPNFrame(name,progress){
    .colorUsingColorSpace($.NSColorSpace.genericRGBColorSpace);}
   var line=color(bar.y),middle=color(bar.y,bar.center+bar.slotWidth/2),node=usageActivityLineNodeFrame(cells,index,progress);
   var tip=node?color(node.y,node.x):null;
-  return {foot:Number(color(bar.y+10).blueComponent),top:Number(color(bar.y+70).blueComponent),lineGreen:Number(line.greenComponent),lineBlue:Number(line.blueComponent),
+  // Follow the final bar height: adaptive ceilings change its geometry, not
+  // the shared reveal phase this native pixel check is intended to measure.
+  return {foot:Number(color(bar.y+10).blueComponent),top:Number(color(bar.y+bar.tokenHeight*.8).blueComponent),lineGreen:Number(line.greenComponent),lineBlue:Number(line.blueComponent),
    middleGreen:Number(middle.greenComponent),middleBlue:Number(middle.blueComponent),nodeX:node?node.x:null,
    tipGreen:tip?Number(tip.greenComponent):null,tipBlue:tip?Number(tip.blueComponent):null,
    barRGB:nativeRGB(color(bar.y+10)),nodeRGB:nativeRGB(line)};

@@ -119,7 +119,7 @@ registerMenuViewSubclass({
             value:hasValue?state.remaining+'%':quotaValueLabel(state,usageSyncState),valueColor:percentageColor,
             fraction:remainingValue/100,
             actual:typeof observedQuotaUseLabel==='function'?observedQuotaUseLabel(state):'',footer:quotaResetLabel(state),
-            footerParts:quotaFooterParts(state,i===rows.length-1),summary:summary},
+            footerParts:quotaFooterParts(state,i===rows.length-1),summary:summary,forecast:forecasts[i]},
             width,row.offset);
           if(i<rows.length-1){
             var separator=$.NSBezierPath.bezierPath;
@@ -194,7 +194,7 @@ registerMenuViewSubclass({
           resetDays:maomaoyunTrafficSnapshot?maomaoyunTrafficSnapshot.resetDays:null,hasValue:presentation.hasValue,
           stale:presentation.stale,value:maomaoyunTrafficSnapshot?maomaoyunTrafficSnapshot.remainingLabel:presentation.value,
           valueColor:valueColor,fraction:presentation.fraction,detail:presentation.todayUsage,
-          footer:presentation.detail,summary:summary},width,0);
+          footer:presentation.detail,summary:summary,forecast:forecast},width,0);
       }
     }
   }

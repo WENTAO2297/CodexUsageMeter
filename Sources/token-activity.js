@@ -21,8 +21,13 @@ function usageActivityRangeThumbRect(position){
 }
 function usageActivityCeiling(value) {
   if(!(value>0))return 0;
-  var power=Math.pow(10,Math.floor(Math.log(value)/Math.LN10)),fraction=value/power;
-  return (fraction<=1?1:fraction<=2?2:fraction<=5?5:10)*power;
+  // Dense readable ceilings keep the peak at roughly 74–93% of the plot,
+  // instead of nearly halving it when a 1/2/5 scale jumps to the next decade.
+  // Leave room for the line's endpoint without changing the zero baseline.
+  var target=value*1.08,power=Math.pow(10,Math.floor(Math.log(target)/Math.LN10)),fraction=target/power;
+  var steps=[1,1.25,1.5,1.75,2,2.5,3,3.5,4,4.5,5,6,7,8,9,10];
+  for(var i=0;i<steps.length;i++)if(fraction<=steps[i])return steps[i]*power;
+  return 10*power;
 }
 function usageActivityTokenText(value) {
   // Axis ceilings may exceed the largest safe observed count. They are scale

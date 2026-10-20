@@ -23,7 +23,7 @@ for(const width of [260,288,320]){
  core.MENU_WIDTH=width;
  const layout=clean(core.usageActivityColumns(merged,width)),cells=layout.cells;
  assert.equal(cells.length,7);assert.equal(core.tokenActivityChartLayout().height,160);
- assert.equal(layout.tokenMax,1000000000);assert.equal(layout.vpnMax,5*G);
+ assert.equal(layout.tokenMax,700000000);assert.equal(layout.vpnMax,6*G);
  const immutable=JSON.stringify(cells);
  for(let i=0;i<7;i++){
   const cell=cells[i];assert(cell.x>=44&&cell.x+cell.width<=width-44&&cell.tokenHeight<=90);
@@ -87,6 +87,30 @@ const forward=JSON.stringify(core.usageActivityLineSegments(continuous,.375));
 core.usageActivityLineSegments(continuous,.875);
 assert.equal(JSON.stringify(core.usageActivityLineSegments(continuous,.375)),forward,'reversal is a pure frame, with no stale path or node state');
 assert.equal(core.usageActivityCeiling(43.15),50);assert.equal(core.usageActivityCeiling(0),0);
+assert.equal(core.usageActivityCeiling(540000000),600000000,'a peak just over five hundred million must not jump to a billion');
+assert.equal(core.usageActivityCeiling(23.8),30,'the VPN axis also avoids the coarse 20-to-50 jump');
+for(let exponent=0;exponent<=15;exponent++)for(let n=100;n<=1000;n++){
+ const value=n/100*10**exponent,ceiling=core.usageActivityCeiling(value),fill=value/ceiling;
+ assert(fill>=.74&&fill<=1/1.08+1e-12,'readable ceilings retain headroom and use the plot height: '+value);
+}
+for(const count of [7,30]){
+ const values=Array.from({length:count},(_,i)=>({date:new Date(Date.UTC(2026,9,1+i)).toISOString().slice(0,10),
+  tokens:i===count-1?540000000:200000000,bytes:(i===count-1?23.8:8)*G,today:i===count-1,tokenStale:false,vpnStale:false}));
+ const model={days:values,hasData:true},before=JSON.stringify(model);
+ const layout=core.usageActivityColumns(model,288);
+ assert.equal(layout.tokenMax,600000000);assert.equal(layout.vpnMax,30*G);
+ assert.equal(layout.cells[count-1].tokenHeight,81);
+ assert(Math.abs(layout.cells[count-1].vpnY-(30+90*23.8/30))<1e-9);
+ const rescaled=core.usageActivityColumns({...model,days:values.map(day=>({...day,tokens:day.tokens*10}))},288);
+ assert.equal(rescaled.tokenMax,6000000000);
+ assert.deepEqual(clean(rescaled.cells.map(c=>c.vpnY)),clean(layout.cells.map(c=>c.vpnY)),'range scaling keeps the other source independent');
+ const empty=core.usageActivityColumns({...model,days:values.map(day=>({...day,tokens:null,bytes:null}))},288);
+ const zero=core.usageActivityColumns({...model,days:values.map(day=>({...day,tokens:0,bytes:0}))},288);
+ assert(!empty.hasTokens&&!empty.hasVPN&&empty.tokenMax===0&&empty.vpnMax===0);
+ assert(zero.hasTokens&&zero.hasVPN&&zero.tokenMax===0&&zero.vpnMax===0);
+ assert(zero.cells.every(cell=>cell.tokenHeight===2&&cell.vpnY===30));
+ assert.equal(JSON.stringify(model),before,'axis selection never alters observed usage');
+}
 const definitions=readSource('main').split('delegate = $.CodexUsageMeterDelegate.alloc.init;')[0];
 const preview=process.argv.includes('--preview')?fs.mkdtempSync(path.join(os.tmpdir(),'codex-activity-hover-')):null;
 const fixture=`
@@ -154,6 +178,27 @@ function detailCase(locale,stale,large){
  ${preview?`if(!stale&&!large)selected.representationUsingTypeProperties($.NSBitmapImageFileTypePNG,$({})).writeToFileAtomically(${JSON.stringify(preview)}+'/'+locale+'-details.png',true);`:''}
 }
 ['zh-CN','en'].forEach(function(locale){detailCase(locale,false,false);detailCase(locale,true,false);detailCase(locale,true,true);});
+var scales=[];
+[7,30].forEach(function(count){['zh-CN','en'].forEach(function(locale){
+ uiLanguage=locale;
+ var model={hasData:true,days:[]};
+ for(var i=0;i<count;i++)model.days.push({date:new Date(Date.UTC(2026,9,i+1)).toISOString().slice(0,10),
+  tokens:i===count-2?540000000:(1+i%4)*80000000,bytes:(i===count-2?23.8:4+i%6*2)*Math.pow(1024,3),
+  today:i===count-1,tokenStale:false,vpnStale:false});
+ var layout=usageActivityColumns(model,MENU_WIDTH),cell=layout.cells[count-2];
+ var image=$.NSImage.alloc.initWithSize($.NSMakeSize(MENU_WIDTH*2,320));sendVoid(image,'lockFocus');
+ var transform=$.NSAffineTransform.transform;transform.scaleXByYBy(2,2);sendVoid(transform,'concat');
+ sendVoid($.NSColor.colorWithCalibratedWhiteAlpha(.17,1),'setFill');$.NSRectFill($.NSMakeRect(0,0,MENU_WIDTH,160));
+ drawUsageActivity(model,1,null);sendVoid(image,'unlockFocus');
+ var rep=$.NSBitmapImageRep.imageRepWithData(image.TIFFRepresentation),factor=Number(rep.pixelsWide)/MENU_WIDTH;
+ var color=rep.colorAtXY(Math.floor(cell.center*factor),Math.floor((160-cell.y-cell.tokenHeight+4)*factor))
+  .colorUsingColorSpace($.NSColorSpace.genericRGBColorSpace);
+ scales.push({count:count,locale:locale,tokenMax:layout.tokenMax,vpnMax:layout.vpnMax,
+  peakHeight:cell.tokenHeight,bluePixel:Number(color.blueComponent)>Number(color.redComponent)+.3,
+  tokenLabels:[usageActivityTokenText(layout.tokenMax/2),usageActivityTokenText(layout.tokenMax)],
+  vpnLabels:[vpnActivityAmount(layout.vpnMax/2),vpnActivityAmount(layout.vpnMax)]});
+ ${preview?`rep.representationUsingTypeProperties($.NSBitmapImageFileTypePNG,$({})).writeToFileAtomically(${JSON.stringify(preview)}+'/axis-'+count+'-'+locale+'.png',true);`:''}
+});});
 uiLanguage='zh-CN';tokenActivityHover=last;
 tokenMeterSnapshot.days[29].tokens=450000000;refreshTokenMeterMenu(true);var revision=tokenActivityHover!==last&&tokenActivityHover.text.indexOf('4.5亿')>=0;
 uiLanguage='en';refreshTokenMeterMenu(true);var english=tokenActivityHover;var localized=english!==last&&!/[月日个]/.test(english.text)&&english.text.indexOf('VPN usage')>=0;
@@ -174,13 +219,20 @@ maomaoyunTrafficSourceState=oldVPNState;
 tokenActivityPointerLocation=function(){menuIsOpen=false;return point;};clearTokenActivityHover();refreshTokenActivityHover();var closeDuringGeometry=tokenActivityHover===null;
 tokenActivityPointerLocation=originalPointer;menuIsOpen=true;point={x:-1,y:-1};delegate.menuTrackingTimer(null);var missedExit=tokenActivityHover===null;
 delegate.menuDidClose(menu);var closed=tokenActivityHover===null;menuIsOpen=true;setTokenMeterExpanded(true,false);isExiting=true;refreshTokenActivityHover();var exited=tokenActivityHover===null;
-JSON.stringify({initial:initial,details:details,duringOpening:duringOpening,futureHidden:futureHidden,newlyRevealed:!!newlyRevealed,followsMotion:followsMotion,reverseClears:reverseClears,
+JSON.stringify({initial:initial,details:details,scales:scales,duringOpening:duringOpening,futureHidden:futureHidden,newlyRevealed:!!newlyRevealed,followsMotion:followsMotion,reverseClears:reverseClears,
  unchanged:unchanged,drawIsReadOnly:drawIsReadOnly,revision:revision,localized:localized,stale:stale,collapsed:collapsed,expanded:expanded,isolated:isolated,bounded:bounded,
  moved:moved,exitedCell:exitedCell,stationary:stationary,staleExit:staleExit,vpnChangedDuringGeometry:vpnChangedDuringGeometry,closeDuringGeometry:closeDuringGeometry,missedExit:missedExit,closed:closed,exited:exited});
 `;
 const native=JSON.parse(execFileSync('/usr/bin/osascript',['-l','JavaScript','-e',readLibrarySource()+'\n'+definitions+'\n'+fixture],{encoding:'utf8',timeout:15000}));
 assert.equal(native.initial.tracking,1);assert.match(native.initial.first,/\nToken 0\nVPN 用量 —$/);assert.match(native.initial.last,/\nToken 4\.35亿\nVPN 用量 —$/);
-for(const [name,value] of Object.entries(native))if(name!=='initial'&&name!=='details')assert(value,name);
+for(const [name,value] of Object.entries(native))if(!['initial','details','scales'].includes(name))assert(value,name);
+assert.equal(native.scales.length,4);
+for(const scale of native.scales){
+ assert.equal(scale.tokenMax,600000000);assert.equal(scale.vpnMax,30*G);assert.equal(scale.peakHeight,81);
+ assert(scale.bluePixel,'the native peak occupies the upper plot instead of stopping halfway');
+ assert.deepEqual(scale.tokenLabels,scale.locale==='zh-CN'?['3亿','6亿']:['300M','600M']);
+ assert.deepEqual(scale.vpnLabels,['15G','30G']);
+}
 assert.equal(native.details.length,6);
 for(const detail of native.details){
  assert.deepEqual(detail.rect,{x:16,y:135,width:256,height:24});assert.equal(detail.text.length,3,'date and both series fit one toolbar capsule');
@@ -202,5 +254,5 @@ for(const detail of native.details){
  assert(detail.text[1].t.startsWith('Token ')&&detail.text[2].t.startsWith('VPN '));
 }
 assert(!/addToolTipRect|NSPanel|NSPopover|addGlobalMonitor|startTransientTimer|NSInitialToolTipDelay/.test(readSource('token-activity')));
-console.log('Combined activity passed: shared date phases, missing/zero, immutable bar/line reveal, unobstructed bilingual header details and 50 lifecycle handoffs.');
+console.log('Combined activity passed: compact independent 7/30-day zero-based axes, native upper-plot peak pixels, shared date phases, missing/zero, unobstructed bilingual header details and 50 lifecycle handoffs.');
 if(preview)console.log('Preview: '+preview+'/hint.png');

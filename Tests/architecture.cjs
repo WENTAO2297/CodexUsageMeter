@@ -24,7 +24,7 @@ for(const name of modules){
  }
 }
 for(const name of ['core','meter-panels-core','forecast-core','token-forecast-core',
- 'observed-usage','vpn-traffic-core','adaptive-forecast-core','forecast-display','vpn-activity']){
+ 'observed-usage','vpn-traffic-core','adaptive-forecast-core','quota-reconstruction-core','forecast-learning-core','vpn-forecast-models','vpn-forecast-core','forecast-display','vpn-activity']){
  assert(!/\bObjC\b|\$\./.test(readSource(name)),`${name} must remain a pure model without native I/O`);
 }
 console.log(`Architecture passed: ${modules.length} complete ordered modules, ${functions.size} unique functions, pure model boundaries.`);

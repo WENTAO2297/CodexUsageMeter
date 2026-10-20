@@ -1,0 +1,177 @@
+{
+  "mode": "retrospective-final-values-48h-lag",
+  "zone": "Asia/Shanghai",
+  "vpn": {
+    "unit": "GiB",
+    "localMatureDates": 32,
+    "localRange": [
+      "2026-09-16",
+      "2026-10-17"
+    ],
+    "paired": {
+      "1": {
+        "previous": {
+          "origins": 23,
+          "nonoverlapping": 23,
+          "mae": 8.91239,
+          "bias": -2.38443,
+          "falseAlarm": 7,
+          "missed": 5
+        },
+        "calendarOff": {
+          "origins": 23,
+          "nonoverlapping": 23,
+          "mae": 8.47749,
+          "bias": -2.26518,
+          "falseAlarm": 9,
+          "missed": 1
+        },
+        "calendar": {
+          "origins": 23,
+          "nonoverlapping": 23,
+          "mae": 8.48151,
+          "bias": -2.28129,
+          "falseAlarm": 8,
+          "missed": 2
+        }
+      },
+      "3": {
+        "previous": {
+          "origins": 21,
+          "nonoverlapping": 7,
+          "mae": 24.63311,
+          "bias": -13.5106,
+          "falseAlarm": 6,
+          "missed": 7
+        },
+        "calendarOff": {
+          "origins": 21,
+          "nonoverlapping": 7,
+          "mae": 22.93193,
+          "bias": -13.01539,
+          "falseAlarm": 7,
+          "missed": 1
+        },
+        "calendar": {
+          "origins": 21,
+          "nonoverlapping": 7,
+          "mae": 22.8804,
+          "bias": -12.99151,
+          "falseAlarm": 6,
+          "missed": 2
+        }
+      },
+      "7": {
+        "previous": {
+          "origins": 17,
+          "nonoverlapping": 3,
+          "mae": 62.73307,
+          "bias": -59.83675,
+          "falseAlarm": 2,
+          "missed": 6
+        },
+        "calendarOff": {
+          "origins": 17,
+          "nonoverlapping": 3,
+          "mae": 60.44174,
+          "bias": -58.71333,
+          "falseAlarm": 4,
+          "missed": 1
+        },
+        "calendar": {
+          "origins": 17,
+          "nonoverlapping": 3,
+          "mae": 60.44174,
+          "bias": -58.71333,
+          "falseAlarm": 4,
+          "missed": 1
+        }
+      },
+      "14": {
+        "previous": {
+          "origins": 10,
+          "nonoverlapping": 1,
+          "mae": 116.24271,
+          "bias": -116.24271,
+          "falseAlarm": 0,
+          "missed": 5
+        },
+        "calendarOff": {
+          "origins": 10,
+          "nonoverlapping": 1,
+          "mae": 116.53058,
+          "bias": -116.53058,
+          "falseAlarm": 0,
+          "missed": 2
+        },
+        "calendar": {
+          "origins": 10,
+          "nonoverlapping": 1,
+          "mae": 116.53058,
+          "bias": -116.53058,
+          "falseAlarm": 0,
+          "missed": 2
+        }
+      },
+      "28": {
+        "previous": {
+          "origins": 0,
+          "nonoverlapping": 0,
+          "mae": null,
+          "bias": null,
+          "falseAlarm": 0,
+          "missed": 0
+        },
+        "calendarOff": {
+          "origins": 0,
+          "nonoverlapping": 0,
+          "mae": null,
+          "bias": null,
+          "falseAlarm": 0,
+          "missed": 0
+        },
+        "calendar": {
+          "origins": 0,
+          "nonoverlapping": 0,
+          "mae": null,
+          "bias": null,
+          "falseAlarm": 0,
+          "missed": 0
+        }
+      }
+    }
+  },
+  "quota": {
+    "unit": "percentage-points per measured target interval (12–36h)",
+    "calendarActiveOrigins": 3,
+    "previous": {
+      "origins": 8,
+      "nonoverlapping": 8,
+      "mae": 12.16888,
+      "bias": -7.54547,
+      "falseAlarm": 2,
+      "missed": 2
+    },
+    "calendar": {
+      "origins": 8,
+      "nonoverlapping": 8,
+      "mae": 12.1242,
+      "bias": -7.59015,
+      "falseAlarm": 2,
+      "missed": 2
+    }
+  },
+  "limitations": [
+    "Only source-validated Shanghai midnights are used for calendar fitting and daily targets.",
+    "Older UTC archives are used only by the frozen previous baseline; they are not relabeled.",
+    "Final reported values with assumed 48h latency, not historical availability/revision snapshots.",
+    "Previously inspected history is not a blind test; overlapping origins and few weekends limit conclusions.",
+    "Quota targets use real interval loss only; derived 28-day estimates are not backtest truth.",
+    "Risk counts use hypothetical budgets, not observed account depletion. No personal records are exported."
+  ],
+  "versions": {
+    "quota": 5,
+    "vpn": 7
+  },
+  "method": "Shanghai day-type exposure regression within each week; robust median of week log-ratios; exposure-weighted shrinkage toward no effect. VPN additive zero-sum calendar shape retains existing SES level. Calendar-off ablation separates date-boundary changes from seasonal effects."
+}

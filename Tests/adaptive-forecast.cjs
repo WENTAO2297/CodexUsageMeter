@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {execFileSync}=require('node:child_process');const {readSource,readLibrarySource}=require('./sources.cjs');
-const c=vm.createContext({});for(const n of ['forecast-core','token-forecast-core','vpn-traffic-core','adaptive-forecast-core','forecast-display'])vm.runInContext(readSource(n),c);
+const c=vm.createContext({});for(const n of ['forecast-core','token-forecast-core','vpn-traffic-core','adaptive-forecast-core','forecast-learning-core','vpn-forecast-models','vpn-forecast-core','forecast-display'])vm.runInContext(readSource(n),c);
 const DAY=86400,base=23000*DAY,clean=o=>JSON.parse(JSON.stringify(o));
 let s=c.afNew('quota','account',base);
 const w=(at,remaining,resetAt=base+7*DAY)=>({durationMins:10080,resetAt,remaining});
@@ -42,7 +42,7 @@ const past=c.afQuotaModels(seeded,base+2*DAY,1,null,null);
 seeded.anchors.push({at:base+4*DAY,remaining:1,resetAt:base+7*DAY,plan:'pro'});
 assert.deepEqual(clean(c.afQuotaModels(seeded,base+2*DAY,1,null,null)),clean(past));
 const future=c.afNew('quota','a',base);future.forecasts=Array.from({length:30},(_,i)=>({
- at:base+i*DAY,target:base+(i+1)*DAY,state:'scored',resolvedAt:base+(i+1)*DAY,
+ at:base+i*DAY,sourceAt:base+i*DAY,issuedAt:base+i*DAY,modelVersion:c.AF_VERSION,target:base+(i+1)*DAY,state:'scored',resolvedAt:base+(i+1)*DAY,
  actual:1,candidates:{recent:1,slow:100},point:5}));
 const weights=c.afWeights(future,{recent:{center:1},slow:{center:100}},1,base+.5*DAY);
 assert.equal(weights.weights.recent,.5);assert.equal(weights.learning,false);
@@ -56,7 +56,7 @@ v=c.afTrafficMerge(v,hist(base+40*DAY),base+40*DAY);
 let vb=c.afTrafficModels(v,base+40*DAY,28),vf=c.afDistribution(v,vb,28,400,base+40*DAY);
 assert(Math.abs(vf.pointRemaining-120)<1e-8);
 assert(vf.highConsumption>=vf.typicalConsumption);assert.equal(vf.verdict,'safe');
-const earlyVPN=c.afDistribution(v,vb,28,100,base+40*DAY);
+const earlyVPN=c.afVPNForecast(v,base+40*DAY,28,100);
 assert(Math.abs(earlyVPN.crossingDays-10)<1e-8,'constant ten units per day exhausts one hundred units in ten days');
 assert(Math.abs(c.trafficDepletionLeadDays({remainingBytes:100,resetDays:28},earlyVPN)-18)<1e-8,
  'actual model crossing is converted into eighteen days BEFORE reset');
@@ -76,7 +76,7 @@ const snap={remainingBytes:100,resetDays:7,totalBytes:400};
 let sum=c.trafficForecastSummary(snap,{hasValue:true,stale:false},{basis:'adaptive',verdict:'tight',
  typicalConsumption:50,highConsumption:150,crossingDays:8,horizonDays:7,text:'At reset: ~50G left · estimate only'});
 assert.equal(c.compactForecastSummary(sum).outcome,'May be tight');assert.equal(c.compactForecastSummary(sum).value,'≈50G');
-sum=c.trafficForecastSummary(snap,{hasValue:true,stale:false},{basis:'adaptive',verdict:'risk',
+sum=c.trafficForecastSummary(snap,{hasValue:true,stale:false},{basis:'adaptive',verdict:'risk',precision:'day',
  typicalConsumption:150,highConsumption:200,crossingDays:3,horizonDays:7,text:'At reset: ~0G left · estimate only'});
 assert.equal(c.compactForecastSummary(sum).outcome,'May run out');
 assert.equal(c.compactForecastSummary(sum).depletionLeadDays,4,'three days of use until depletion means FOUR days before a seven-day reset');
@@ -93,16 +93,17 @@ for(let m=0;m<=60;m+=5){remaining-=m>30?2:1;sessionHistory=c.updateForecastHisto
 const sw={durationMins:300,resetAt:base+5*3600,remaining};
 const sc={now:base+3600,sync:'ready',lastSuccessAt:base+3600,accountKnown:true};
 const original=c.forecastQuotaWindow(sw,sessionHistory[0],sc),modern=c.afSessionForecast(sw,sessionHistory[0],sc,original);
-assert.equal(modern.algorithmVersion,3);assert(modern.horizon<=3600);assert(modern.rate>original.rate,'recent sustained activity contributes more than older idle/low activity');
+assert.equal(modern.algorithmVersion,c.AF_VERSION);assert(modern.horizon<=3600);assert(modern.rate>original.rate,'recent sustained activity contributes more than older idle/low activity');
 const spike={basis:undefined,reason:'Recent usage jump'};assert.equal(c.afSessionForecast(sw,sessionHistory[0],sc,spike),spike);
 console.log('Adaptive core passed: account/plan/refill/censor guards, sleep totals, immutable cutoffs, mature revisions, missing/zero, typical vs high risk, and delayed independent learning.');
 
 // Real Foundation private I/O and integration; isolated directory, no VPN or network.
+const preview=process.argv.includes('--preview')?fs.mkdtempSync(path.join(os.tmpdir(),'meter-adaptive-preview-')):null;
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'meter-adaptive-native-'));
 try{
  const code=readLibrarySource()+`\n
 var root=${JSON.stringify(tmp)};
-adaptivePath=function(kind){return root+'/prediction-'+kind+'.json';};
+adaptivePath=function(kind,version){return root+'/prediction-v'+(version||afVersion(kind))+'-'+kind+'.json';};
 var now=Date.now()/1000;
 usageAccountId='test-account';readUsageAccountId=function(){return usageAccountId;};
 var state=afNew('quota','test-account',now);state=afQuotaObserve(state,{remaining:80,resetAt:now+7*86400,durationMins:10080},'pro',now);
@@ -120,13 +121,15 @@ var changed=currentAdaptiveQuotaForecast(quotaWindows[0],{now:now,sync:'ready',l
 var vs={accountKey:'a'.repeat(64),credentialRevision:'b'.repeat(64),reportedAt:now*1000,
  usedBytes:100*1024*1024*1024,totalBytes:400*1024*1024*1024,remainingBytes:300*1024*1024*1024,resetDays:28};
 var vh={accountKey:vs.accountKey,credentialRevision:vs.credentialRevision,state:'ready',fetchedAt:now*1000,
- days:Array.from({length:35},function(_,i){return [Math.floor(now/86400)*86400-(35-i)*86400,5*1024*1024*1024];})};
+ days:Array.from({length:35},function(_,i){return [Math.floor(now/86400)*86400-(35-i)*86400,5*1024*1024*1024];}),
+ calendarBasis:'local-midnight',calendarState:'ready',calendarDays:Array.from({length:35},function(_,i){
+ return [Math.floor((now+28800)/86400)*86400-28800-(35-i)*86400,5*1024*1024*1024];})};
 recordAdaptiveVPN(vs,vh);var vpn=currentMaoMaoYunForecast(vs,vh,now*1000);
 var countBefore=adaptiveVPNState.forecasts.length;recordAdaptiveVPN(vs,vh);
 var countAfter=adaptiveVPNState.forecasts.length;
 var vault=adaptiveRead('vpn',adaptiveVPNScope(vs),Date.now()/1000);
 var corruptHistory=currentMaoMaoYunForecast(vs,{state:'partial',fetchedAt:now*1000,credentialRevision:vs.credentialRevision},now*1000);
-// Draw actual production cards with v3 results in both languages, offscreen.
+// Draw actual production cards with v4 results in both languages, offscreen.
 maomaoyunTrafficSnapshot=normalizeMaoMaoYunTraffic(vs,Math.floor(now*1000));maomaoyunTrafficSourceState='ready';maomaoyunHistorySnapshot=vh;
 quotaWindows[0].label='Weekly';delegate=$.NSObject.alloc.init;statusItem={};buildMenu();
 var rendered=[];
@@ -136,20 +139,72 @@ var rendered=[];
  [usageCardView,maomaoyunTrafficView].forEach(function(view){$.NSGraphicsContext.saveGraphicsState;
  var transform=$.NSAffineTransform.transform;transform.translateXByYBy(view.frame.origin.x,view.frame.origin.y);transform.concat;
  view.drawRect(view.bounds);$.NSGraphicsContext.restoreGraphicsState;});image.unlockFocus;
- rendered.push(Number(image.TIFFRepresentation.length)>0);});
+ rendered.push(Number(image.TIFFRepresentation.length)>0);
+ ${preview?`var bitmap=$.NSBitmapImageRep.imageRepWithData(image.TIFFRepresentation);
+ bitmap.representationUsingTypeProperties($.NSBitmapImageFileTypePNG,$({})).writeToFileAtomically(${JSON.stringify(preview)}+'/'+code+'.png',true);`:''}
+ });
+// A real v3 file is imported without rewriting it. Its old score can never
+// be counted as a prospective v4 result; corrupt v4 never resurrects v3.
+var normalPath=adaptivePath;
+adaptivePath=function(kind,version){return root+'/migration/prediction-v'+(version||afVersion(kind))+'-'+kind+'.json';};
+var legacy=afNew('quota','test-account',now-2*86400);
+legacy=afQuotaObserve(legacy,{remaining:80,resetAt:now+5*86400,durationMins:10080},'pro',now-2*86400);
+var legacyF=afDistribution(legacy,{models:{pooled:{center:10}},rows:[{start:now-3*86400,end:now-2*86400,loss:10}]},1,80,now-2*86400);
+afIssue(legacy,legacyF,1,now-2*86400);
+legacy=afQuotaObserve(legacy,{remaining:70,resetAt:now+5*86400,durationMins:10080},'pro',now-86400);
+legacy.version=3;delete legacy.balances;writePrivateJSON(adaptivePath('quota',3),legacy);
+function fileText(file){return ObjC.unwrap($.NSString.stringWithContentsOfFileEncodingError(file,$.NSUTF8StringEncoding,null));}
+var originalLegacy=fileText(adaptivePath('quota',3)),migrated=adaptiveRead('quota','test-account',now);
+var migratedVersion=migrated.version,migratedScore=migrated.forecasts[0].modelVersion;
+adaptiveSave(migrated);
+var migrationUnchanged=originalLegacy===fileText(adaptivePath('quota',3));
+var migrationPrivate=!!$.NSFileManager.defaultManager.fileExistsAtPath(adaptivePath('quota'));
+writePrivateJSON(adaptivePath('quota'),{version:AF_VERSION,scope:'other-account'});
+var noLegacyResurrection=adaptiveRead('quota','test-account',now).anchors.length===0;
+// VPN has its own current journal. Import verified v5 numbers, never inherit the
+// old model's warning latch, rewrite its file, or resurrect it after corruption.
+var oldVPN=afClone(adaptiveVPNState);oldVPN.version=5;oldVPN.forecasts=[];
+oldVPN.alert={value:'risk',count:0,at:now};
+writePrivateJSON(adaptivePath('vpn',5),oldVPN);
+var oldVPNText=fileText(adaptivePath('vpn',5)),migratedVPN=adaptiveRead('vpn',adaptiveVPNScope(vs),now);
+var vpnMigrationVersion=migratedVPN.version,vpnMigrationDays=migratedVPN.days.length,vpnMigrationAlert=migratedVPN.alert;
+adaptiveSave(migratedVPN);
+var vpnMigrationUnchanged=oldVPNText===fileText(adaptivePath('vpn',5));
+var vpnMigrationPrivate=!!$.NSFileManager.defaultManager.fileExistsAtPath(adaptivePath('vpn'));
+writePrivateJSON(adaptivePath('vpn'),{version:AF_VPN_VERSION,scope:'different-session'});
+var vpnNoLegacyResurrection=adaptiveRead('vpn',adaptiveVPNScope(vs),now).days.length===0;
+adaptivePath=normalPath;
 JSON.stringify({count:restored.anchors.length,scope:restored.scope,isolated:isolated.anchors.length,
  version:restored.version,valid:!!afNormalize(restored,'quota','test-account',now),
- quotaBasis:live&&live.basis,quotaRemaining:live&&live.pointRemaining,stale:stale,changed:changed,
+ quotaBasis:live&&live.basis,quotaRemaining:live&&live.pointRemaining,
+ quotaTimeBound:!!(live&&live.at===now&&live.resetAt===quotaWindows[0].resetAt),stale:stale,changed:changed,
  vpnBasis:vpn.basis,vpnRemaining:vpn.pointRemaining/(1024*1024*1024),
- issuedOnce:countBefore===countAfter,restoredVPN:vault.days.length,partialBlocked:corruptHistory.basis!=='adaptive',rendered:rendered});`;
+ issuedOnce:countBefore===countAfter,restoredVPN:vault.days.length,restoredCalendar:vault.calendarDays.length,
+ calendarModel:!!(adaptiveVPNResult.candidates.multiSES&&adaptiveVPNResult.candidates.multiSES.shanghai),
+ partialBlocked:corruptHistory.basis!=='adaptive',rendered:rendered,
+ migratedVersion:migratedVersion,migratedScore:migratedScore,migrationUnchanged:migrationUnchanged,
+ migrationPrivate:migrationPrivate,noLegacyResurrection:noLegacyResurrection,
+ vpnVersion:vpn.algorithmVersion,vpnMigrationVersion:vpnMigrationVersion,vpnMigrationDays:vpnMigrationDays,
+ vpnMigrationAlert:vpnMigrationAlert,vpnMigrationUnchanged:vpnMigrationUnchanged,
+ vpnMigrationPrivate:vpnMigrationPrivate,vpnNoLegacyResurrection:vpnNoLegacyResurrection});`;
  const result=JSON.parse(execFileSync('/usr/bin/osascript',['-l','JavaScript','-e',code],{encoding:'utf8',timeout:15000}));
- assert.deepEqual(result,{count:1,scope:'test-account',isolated:0,version:3,valid:true,
- quotaBasis:'adaptive',quotaRemaining:30,stale:null,changed:null,vpnBasis:'adaptive',vpnRemaining:160,
- issuedOnce:true,restoredVPN:35,partialBlocked:true,rendered:[true,true]});
- const file=path.join(tmp,'prediction-quota.json');assert.equal(fs.statSync(file).mode&0o777,0o600);
+ assert(Math.abs(result.vpnRemaining-160)<1e-8,'fractional calendar boundaries retain the same constant-rate balance');
+ assert.deepEqual({...result,vpnRemaining:160},{count:1,scope:'test-account',isolated:0,version:5,valid:true,
+ quotaBasis:'adaptive',quotaRemaining:30,quotaTimeBound:true,stale:null,changed:null,vpnBasis:'adaptive',vpnRemaining:160,
+ issuedOnce:true,restoredVPN:35,restoredCalendar:35,calendarModel:true,partialBlocked:true,rendered:[true,true],migratedVersion:5,migratedScore:3,
+ migrationUnchanged:true,migrationPrivate:true,noLegacyResurrection:true,
+ vpnVersion:7,vpnMigrationVersion:7,vpnMigrationDays:35,vpnMigrationAlert:null,vpnMigrationUnchanged:true,
+ vpnMigrationPrivate:true,vpnNoLegacyResurrection:true});
+ const file=path.join(tmp,'prediction-v5-quota.json');assert.equal(fs.statSync(file).mode&0o777,0o600);
+ assert.equal(fs.statSync(path.join(tmp,'migration/prediction-v3-quota.json')).mode&0o777,0o600);
+ assert.equal(fs.statSync(path.join(tmp,'migration/prediction-v5-quota.json')).mode&0o777,0o600);
+ assert.equal(fs.statSync(path.join(tmp,'prediction-v7-vpn.json')).mode&0o777,0o600);
+ assert.equal(fs.statSync(path.join(tmp,'migration/prediction-v5-vpn.json')).mode&0o777,0o600);
+ assert.equal(fs.statSync(path.join(tmp,'migration/prediction-v7-vpn.json')).mode&0o777,0o600);
  assert.equal(fs.statSync(tmp).mode&0o777,0o700);
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 console.log('Adaptive Foundation journal passed: real private atomic persistence, restart restore and account isolation.');
+if(preview)console.log(JSON.stringify({preview}));
 
 // Explicit read-only live check through the app's own signed account helper.
 // No credentials, raw responses, account IDs or query URLs are printed.
@@ -165,10 +220,10 @@ if(process.argv.includes('--live')){
  store=c.afTrafficObserve(store,snapshot,snapshot.reportedAt/1000);
  store=c.afTrafficMerge(store,history.history,at);
  const forecast=c.afDistribution(store,c.afTrafficModels(store,at,snapshot.resetDays),snapshot.resetDays,snapshot.remainingBytes,at);
- assert(forecast&&forecast.algorithmVersion===3,'v3 must produce a real-data forecast, not fall through silently');
+ assert(forecast&&forecast.algorithmVersion===c.AF_VPN_VERSION,'current VPN must produce a real-data forecast, not fall through silently');
  assert(forecast.pointRemaining>=0&&forecast.pointRemaining<=snapshot.remainingBytes);
  assert(forecast.highConsumption>=forecast.typicalConsumption);
- console.log(JSON.stringify({liveTraffic:{algorithm:3,reportedDays:store.days.length,resetDays:snapshot.resetDays,
+ console.log(JSON.stringify({liveTraffic:{algorithm:c.AF_VPN_VERSION,reportedDays:store.days.length,resetDays:snapshot.resetDays,
   estimateGiB:Math.round(forecast.pointRemaining/1024**3),quality:forecast.quality,models:Object.keys(forecast.weights),
   typicalConsumptionGiB:Math.round(forecast.typicalConsumption/1024**3),highConsumptionGiB:Math.round(forecast.highConsumption/1024**3),
   elapsedMs:Date.now()-now}},null,2));
@@ -182,7 +237,7 @@ if(process.argv.includes('--live')){
  qs=c.afSeedQuota(qs,tokens,quota.planType,at);
  const horizon=(window.resetAt-observedAt)/DAY,b=c.afQuotaModels(qs,observedAt,horizon,null,null);
  const qf=c.afDistribution(qs,b,horizon,window.remaining,observedAt);
- assert(qf&&qf.algorithmVersion===3,'official interval observations must support the current quota');
- console.log(JSON.stringify({liveQuota:{algorithm:3,officialIntervals:c.afQuotaIntervals(qs,observedAt).length,
+ assert(qf&&qf.algorithmVersion===c.AF_VERSION,'official interval observations must support the current quota');
+ console.log(JSON.stringify({liveQuota:{algorithm:c.AF_VERSION,officialIntervals:c.afQuotaIntervals(qs,observedAt).length,
   snapshotAgeSeconds:Math.round(at-observedAt),estimatePercent:Math.round(qf.pointRemaining),quality:qf.quality}},null,2));
 }
